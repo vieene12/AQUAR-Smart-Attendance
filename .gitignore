@@ -14,3 +14,10 @@ android/key.properties
 *.jks
 *.keystore
 .tool_home/
+.tool_appdata/
+.tool_home/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+android/local.properties
