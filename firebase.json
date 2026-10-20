@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "smart-attendance-32d6b",
+          "appId": "1:1000446782853:android:543aac31cea6ade34ea8ec",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "smart-attendance-32d6b",
+          "configurations": {
+            "android": "1:1000446782853:android:543aac31cea6ade34ea8ec"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

@@ -1,0 +1,37 @@
+name: smart_attendance
+description: Ứng dụng chấm công nhân viên Smart Attendance.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  cloud_firestore: ^6.10.0
+  firebase_auth: ^6.7.0
+  firebase_core: ^4.15.0
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  geolocator: ^14.1.1
+  local_auth: ^3.0.2
+  nfc_manager: ^4.2.1
+  pdf: 3.12.0
+  printing: 5.14.3
+
+# image 4.11.0 calls a ZLibDecoder API absent from archive <4.4.0,
+# while pdf 3.12.0 requires archive <4.1.0. Use the local compatibility fix.
+dependency_overrides:
+  image:
+    path: third_party/image
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/Roboto-Regular.ttf
