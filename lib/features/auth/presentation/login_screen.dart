@@ -251,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen>
                             margin: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? const Color(0xFF101729)
+                                  ? const Color(0xFF101C2C)
                                   : Colors.white,
                               borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(32),
@@ -471,7 +471,7 @@ class _GradientButton extends StatelessWidget {
               ? []
               : [
                   BoxShadow(
-                    color: const Color(0xFF3D5AF1).withAlpha(80),
+                    color: const Color(0xFF0288D1).withAlpha(80),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),

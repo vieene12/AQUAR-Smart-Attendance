@@ -76,25 +76,25 @@ class AdminHomeScreen extends StatelessWidget {
         'Tổng quan',
         'Tổng quan',
         Icons.dashboard_rounded,
-        Color(0xFF3D5AF1),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Nhân viên',
         'Quản lý nhân viên',
         Icons.groups_rounded,
-        Color(0xFF7B2FBE),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Báo cáo',
         'Báo cáo thống kê',
         Icons.assessment_rounded,
-        Color(0xFF00897B),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Lương',
         'Bảng lương',
         Icons.payments_rounded,
-        Color(0xFFE65100),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Email',
@@ -106,25 +106,25 @@ class AdminHomeScreen extends StatelessWidget {
         'Vị trí',
         'Vị trí chấm công',
         Icons.place_rounded,
-        Color(0xFFC62828),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Thẻ NFC',
         'Quản lý thẻ NFC',
         Icons.nfc_rounded,
-        Color(0xFF00838F),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'NFC quầy',
         'Chấm công NFC tại quầy',
         Icons.contactless_rounded,
-        Color(0xFF4527A0),
+        Color(0xFF0277BD),
       ),
       _HomeSection(
         'Thủ công',
         'Chấm công thủ công',
         Icons.edit_calendar_rounded,
-        Color(0xFF558B2F),
+        Color(0xFF0288D1),
       ),
     ],
   );
@@ -171,43 +171,43 @@ class ManagerHomeScreen extends StatelessWidget {
         'Tổng quan',
         'Tổng quan',
         Icons.dashboard_rounded,
-        Color(0xFF3D5AF1),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Nhân viên',
         'Nhân viên phụ trách',
         Icons.groups_rounded,
-        Color(0xFF7B2FBE),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Chấm công',
         'Chấm công thủ công',
         Icons.edit_calendar_rounded,
-        Color(0xFF558B2F),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Lịch sử',
         'Lịch sử',
         Icons.history_rounded,
-        Color(0xFF00838F),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Báo cáo',
         'Báo cáo thống kê',
         Icons.assessment_rounded,
-        Color(0xFF00897B),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Lương',
         'Bảng lương',
         Icons.payments_rounded,
-        Color(0xFFE65100),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'NFC quầy',
         'Chấm công NFC tại quầy',
         Icons.contactless_rounded,
-        Color(0xFF4527A0),
+        Color(0xFF0277BD),
       ),
     ],
   );
@@ -242,19 +242,19 @@ class EmployeeHomeScreen extends StatelessWidget {
         'Tổng quan',
         'Tổng quan',
         Icons.dashboard_rounded,
-        Color(0xFF3D5AF1),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Chấm công',
         'Chấm công',
         Icons.fact_check_rounded,
-        Color(0xFF00897B),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Lịch sử',
         'Lịch sử chấm công',
         Icons.history_rounded,
-        Color(0xFF7B2FBE),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Giờ làm',
@@ -266,13 +266,13 @@ class EmployeeHomeScreen extends StatelessWidget {
         'Lương',
         'Lương của tôi',
         Icons.payments_rounded,
-        Color(0xFFE65100),
+        Color(0xFF0288D1),
       ),
       _HomeSection(
         'Báo cáo',
         'Báo cáo của tôi',
         Icons.assessment_rounded,
-        Color(0xFF558B2F),
+        Color(0xFF0288D1),
       ),
     ],
   );
@@ -682,7 +682,7 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A2444) : Colors.white,
+        color: isDark ? const Color(0xFF132235) : Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -713,13 +713,13 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF3D5AF1).withAlpha(20),
+              color: const Color(0xFF0288D1).withAlpha(20),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'Đang phát triển',
               style: TextStyle(
-                color: const Color(0xFF3D5AF1),
+                color: const Color(0xFF0288D1),
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -755,7 +755,7 @@ class _UserProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3D5AF1).withAlpha(isDark ? 50 : 70),
+            color: const Color(0xFF0288D1).withAlpha(isDark ? 50 : 70),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -884,7 +884,7 @@ class _FeatureCardState extends State<_FeatureCard> {
           transform: Matrix4.translationValues(0, _hovered ? -4.0 : 0.0, 0),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1A2444) : Colors.white,
+            color: isDark ? const Color(0xFF132235) : Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
