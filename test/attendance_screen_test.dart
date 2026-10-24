@@ -484,7 +484,7 @@ void main() {
     expect(auth.calls, 0);
   });
 
-  testWidgets('NFC đang bật vẫn chưa chấm công bằng thẻ', (tester) async {
+  testWidgets('NFC đang bật và chọn phương thức thẻ NFC', (tester) async {
     final auth = _FakeBiometricAuthenticator();
     final repository = _FakeAttendanceRepository();
     await _pumpAttendance(
@@ -497,10 +497,7 @@ void main() {
     await tester.tap(find.text('Thẻ NFC'));
     await tester.pump();
     expect(find.text('NFC đang bật trên thiết bị.'), findsOneWidget);
-    expect(
-      find.textContaining('Chưa liên kết thẻ hoặc chấm công bằng NFC.'),
-      findsOneWidget,
-    );
+    expect(find.text('Quét thẻ NFC'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, 'Check-in'))
@@ -578,7 +575,9 @@ void main() {
     },
   );
 
-  testWidgets('quét UID hex, dừng phiên và cho phép quét lại', (tester) async {
+  testWidgets('quét thẻ NFC tự động gọi check-in khi chưa có bản ghi', (
+    tester,
+  ) async {
     final reader = _FakeNfcTagReader();
     final repository = _FakeAttendanceRepository();
     await _pumpAttendance(
@@ -600,8 +599,62 @@ void main() {
     await tester.pump();
     expect(find.text('UID (hex): 040AFF'), findsOneWidget);
     expect(reader.stopCalls, 1);
-    expect(repository.checkInCalls, 0);
+    // Sau khi đọc UID thành công, phải gọi checkIn
+    expect(repository.checkInCalls, 1);
     expect(repository.checkOutCalls, 0);
+    expect(
+      find.text('Check-in NFC thành công.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('quét thẻ NFC tự động gọi check-out khi đã có bản ghi đang làm', (
+    tester,
+  ) async {
+    final reader = _FakeNfcTagReader();
+    final repository =
+        _FakeAttendanceRepository()..record = AttendanceRecord(
+          employeeId: 'employee-1',
+          workDate: '2026-10-10',
+          checkInAt: DateTime.utc(2026, 10, 10, 2),
+          method: 'nfc_mobile',
+        );
+    await _pumpAttendance(
+      tester,
+      _FakeBiometricAuthenticator(),
+      repository,
+      _FakeNfcChecker(NfcAvailability.enabled),
+      null,
+      reader,
+    );
+    await tester.ensureVisible(find.text('Thẻ NFC'));
+    await tester.tap(find.text('Thẻ NFC'));
+    await tester.pump();
+    await tester.tap(find.text('Quét thẻ NFC'));
+    await tester.pump();
+    reader.discover(Uint8List.fromList([0x01, 0x02]));
+    await tester.pump();
+    await tester.pump();
+    expect(reader.stopCalls, 1);
+    expect(repository.checkInCalls, 0);
+    expect(repository.checkOutCalls, 1);
+    expect(find.text('Check-out NFC thành công.'), findsOneWidget);
+  });
+
+  testWidgets('quét thẻ NFC UID rỗng không chấm công', (tester) async {
+    final reader = _FakeNfcTagReader();
+    final repository = _FakeAttendanceRepository();
+    await _pumpAttendance(
+      tester,
+      _FakeBiometricAuthenticator(),
+      repository,
+      _FakeNfcChecker(NfcAvailability.enabled),
+      null,
+      reader,
+    );
+    await tester.ensureVisible(find.text('Thẻ NFC'));
+    await tester.tap(find.text('Thẻ NFC'));
+    await tester.pump();
     await tester.tap(find.text('Quét thẻ NFC'));
     await tester.pump();
     reader.discover(null);
@@ -609,7 +662,10 @@ void main() {
     await tester.pump();
     expect(find.textContaining('không cung cấp UID'), findsOneWidget);
     expect(find.text('UID (hex): 040AFF'), findsNothing);
-    expect(reader.stopCalls, 2);
+    expect(reader.stopCalls, 1);
+    // Không có UID nên không chấm công
+    expect(repository.checkInCalls, 0);
+    expect(repository.checkOutCalls, 0);
   });
 
   testWidgets('hủy quét đóng phiên và bỏ qua thẻ đến muộn', (tester) async {
@@ -772,13 +828,17 @@ class _FakeAttendanceRepository implements AttendanceRepository {
   }
 
   @override
-  Future<AttendanceRecord> checkIn(String employeeId) async {
+  Future<AttendanceRecord> checkIn(
+    String employeeId, {
+    String method = 'biometric',
+  }) async {
     checkInCalls++;
     if (checkInError != null) throw checkInError!;
     return record = AttendanceRecord(
       employeeId: employeeId,
       workDate: '2026-10-10',
       checkInAt: DateTime.utc(2026, 10, 10, 2),
+      method: method,
     );
   }
 

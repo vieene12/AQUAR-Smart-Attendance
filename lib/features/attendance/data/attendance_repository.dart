@@ -63,7 +63,7 @@ String workDateFromCalendarDate(DateTime date) {
 
 abstract class AttendanceRepository {
   Future<AttendanceRecord?> loadToday(String employeeId);
-  Future<AttendanceRecord> checkIn(String employeeId);
+  Future<AttendanceRecord> checkIn(String employeeId, {String method = 'biometric'});
   Future<AttendanceRecord> checkOut(String employeeId);
   Future<List<AttendanceRecord>> loadHistory(
     String employeeId, {
@@ -150,7 +150,13 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
   }
 
   @override
-  Future<AttendanceRecord> checkIn(String employeeId) async {
+  Future<AttendanceRecord> checkIn(
+    String employeeId, {
+    String method = 'biometric',
+  }) async {
+    if (!['biometric', 'nfc_mobile'].contains(method)) {
+      throw ArgumentError.value(method, 'method');
+    }
     final user = _ensureSignedIn(employeeId);
     await user.reload();
     _ensureSignedIn(employeeId);
@@ -176,7 +182,7 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
         'employeeId': employeeId,
         'workDate': workDate,
         'checkInAt': FieldValue.serverTimestamp(),
-        'method': 'biometric',
+        'method': method,
         'status': 'working',
       });
     });
@@ -218,6 +224,8 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
           data?.containsKey('checkOutAt') == true) {
         throw const AttendanceAlreadyCheckedOutException();
       }
+      // Chỉ bản ghi NFC từ kiosk (method='nfc') và thủ công mới cần checkout tại quầy.
+      // Bản ghi NFC từ điện thoại (method='nfc_mobile') cho phép checkout bình thường.
       if (data?['method'] == 'nfc' || data?['method'] == 'manual') {
         throw const AttendanceKioskOnlyException();
       }
@@ -266,7 +274,9 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
     final checkInAt = data?['checkInAt'];
     if (data?['employeeId'] != employeeId ||
         data?['workDate'] != workDate ||
-        !['biometric', 'nfc', 'manual'].contains(data?['method']) ||
+        !['biometric', 'nfc', 'nfc_mobile', 'manual'].contains(
+          data?['method'],
+        ) ||
         checkInAt is! Timestamp) {
       throw const AttendanceUnconfirmedException();
     }

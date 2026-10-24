@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_attendance/core/theme/app_theme.dart';
 import 'package:smart_attendance/features/admin/accounts/presentation/account_list_screen.dart';
 import 'package:smart_attendance/features/admin/attendance_location/data/attendance_location_repository.dart';
 import 'package:smart_attendance/features/admin/attendance_location/presentation/attendance_location_screen.dart';
@@ -71,30 +72,59 @@ class AdminHomeScreen extends StatelessWidget {
     attendanceReportRepository: attendanceReportRepository,
     roleIcon: Icons.admin_panel_settings_outlined,
     sections: const [
-      _HomeSection('Tổng quan', 'Tổng quan', Icons.dashboard_outlined),
-      _HomeSection('Nhân viên', 'Quản lý nhân viên', Icons.groups_outlined),
       _HomeSection(
-        'Báo cáo thống kê',
-        'Báo cáo thống kê',
-        Icons.assessment_outlined,
+        'Tổng quan',
+        'Tổng quan',
+        Icons.dashboard_rounded,
+        Color(0xFF3D5AF1),
       ),
-      _HomeSection('Lương', 'Bảng lương', Icons.payments_outlined),
-      _HomeSection('Email', 'Gửi email', Icons.mail_outline),
       _HomeSection(
-        'Vị trí chấm công',
-        'Vị trí chấm công',
-        Icons.place_outlined,
+        'Nhân viên',
+        'Quản lý nhân viên',
+        Icons.groups_rounded,
+        Color(0xFF7B2FBE),
       ),
-      _HomeSection('Thẻ NFC', 'Quản lý thẻ NFC', Icons.nfc_outlined),
       _HomeSection(
-        'NFC tại quầy',
+        'Báo cáo',
+        'Báo cáo thống kê',
+        Icons.assessment_rounded,
+        Color(0xFF00897B),
+      ),
+      _HomeSection(
+        'Lương',
+        'Bảng lương',
+        Icons.payments_rounded,
+        Color(0xFFE65100),
+      ),
+      _HomeSection(
+        'Email',
+        'Gửi email',
+        Icons.mail_rounded,
+        Color(0xFF0277BD),
+      ),
+      _HomeSection(
+        'Vị trí',
+        'Vị trí chấm công',
+        Icons.place_rounded,
+        Color(0xFFC62828),
+      ),
+      _HomeSection(
+        'Thẻ NFC',
+        'Quản lý thẻ NFC',
+        Icons.nfc_rounded,
+        Color(0xFF00838F),
+      ),
+      _HomeSection(
+        'NFC quầy',
         'Chấm công NFC tại quầy',
-        Icons.contactless_outlined,
+        Icons.contactless_rounded,
+        Color(0xFF4527A0),
       ),
       _HomeSection(
         'Thủ công',
         'Chấm công thủ công',
-        Icons.edit_calendar_outlined,
+        Icons.edit_calendar_rounded,
+        Color(0xFF558B2F),
       ),
     ],
   );
@@ -137,24 +167,47 @@ class ManagerHomeScreen extends StatelessWidget {
     attendanceReportRepository: attendanceReportRepository,
     roleIcon: Icons.manage_accounts_outlined,
     sections: const [
-      _HomeSection('Tổng quan', 'Tổng quan', Icons.dashboard_outlined),
-      _HomeSection('Nhân viên', 'Nhân viên phụ trách', Icons.groups_outlined),
+      _HomeSection(
+        'Tổng quan',
+        'Tổng quan',
+        Icons.dashboard_rounded,
+        Color(0xFF3D5AF1),
+      ),
+      _HomeSection(
+        'Nhân viên',
+        'Nhân viên phụ trách',
+        Icons.groups_rounded,
+        Color(0xFF7B2FBE),
+      ),
       _HomeSection(
         'Chấm công',
         'Chấm công thủ công',
-        Icons.edit_calendar_outlined,
+        Icons.edit_calendar_rounded,
+        Color(0xFF558B2F),
       ),
-      _HomeSection('Lịch sử', 'Lịch sử', Icons.history_outlined),
       _HomeSection(
-        'Báo cáo thống kê',
-        'Báo cáo thống kê',
-        Icons.assessment_outlined,
+        'Lịch sử',
+        'Lịch sử',
+        Icons.history_rounded,
+        Color(0xFF00838F),
       ),
-      _HomeSection('Lương', 'Bảng lương', Icons.payments_outlined),
       _HomeSection(
-        'NFC tại quầy',
+        'Báo cáo',
+        'Báo cáo thống kê',
+        Icons.assessment_rounded,
+        Color(0xFF00897B),
+      ),
+      _HomeSection(
+        'Lương',
+        'Bảng lương',
+        Icons.payments_rounded,
+        Color(0xFFE65100),
+      ),
+      _HomeSection(
+        'NFC quầy',
         'Chấm công NFC tại quầy',
-        Icons.contactless_outlined,
+        Icons.contactless_rounded,
+        Color(0xFF4527A0),
       ),
     ],
   );
@@ -185,26 +238,58 @@ class EmployeeHomeScreen extends StatelessWidget {
     myAttendanceReportRepository: myAttendanceReportRepository,
     roleIcon: Icons.badge_outlined,
     sections: const [
-      _HomeSection('Tổng quan', 'Tổng quan', Icons.dashboard_outlined),
-      _HomeSection('Chấm công', 'Chấm công', Icons.fact_check_outlined),
-      _HomeSection('Lịch sử', 'Lịch sử chấm công', Icons.history_outlined),
-      _HomeSection('Giờ làm', 'Giờ làm', Icons.schedule_outlined),
-      _HomeSection('Lương của tôi', 'Lương của tôi', Icons.payments_outlined),
       _HomeSection(
+        'Tổng quan',
+        'Tổng quan',
+        Icons.dashboard_rounded,
+        Color(0xFF3D5AF1),
+      ),
+      _HomeSection(
+        'Chấm công',
+        'Chấm công',
+        Icons.fact_check_rounded,
+        Color(0xFF00897B),
+      ),
+      _HomeSection(
+        'Lịch sử',
+        'Lịch sử chấm công',
+        Icons.history_rounded,
+        Color(0xFF7B2FBE),
+      ),
+      _HomeSection(
+        'Giờ làm',
+        'Giờ làm',
+        Icons.schedule_rounded,
+        Color(0xFF0277BD),
+      ),
+      _HomeSection(
+        'Lương',
+        'Lương của tôi',
+        Icons.payments_rounded,
+        Color(0xFFE65100),
+      ),
+      _HomeSection(
+        'Báo cáo',
         'Báo cáo của tôi',
-        'Báo cáo của tôi',
-        Icons.assessment_outlined,
+        Icons.assessment_rounded,
+        Color(0xFF558B2F),
       ),
     ],
   );
 }
 
 class _HomeSection {
-  const _HomeSection(this.navigationLabel, this.title, this.icon);
+  const _HomeSection(
+    this.navigationLabel,
+    this.title,
+    this.icon,
+    this.color,
+  );
 
   final String navigationLabel;
   final String title;
   final IconData icon;
+  final Color color;
 }
 
 class _RoleHomeScaffold extends StatefulWidget {
@@ -256,22 +341,59 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 720;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Smart Attendance'),
+        flexibleSpace: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: isDark
+                ? AppTheme.darkPrimaryGradient
+                : AppTheme.primaryGradient,
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(25),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Colors.white.withAlpha(50),
+                  width: 1,
+                ),
+              ),
+              child: Icon(Icons.fact_check_rounded, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Smart Attendance',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
         actions: [
           if (wide)
             TextButton.icon(
               onPressed: widget.onSignOut,
-              icon: const Icon(Icons.logout_outlined),
-              label: const Text('Đăng xuất'),
+              icon: const Icon(Icons.logout_rounded, color: Colors.white),
+              label: const Text(
+                'Đăng xuất',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
             )
           else
             IconButton(
               onPressed: widget.onSignOut,
               tooltip: 'Đăng xuất',
-              icon: const Icon(Icons.logout_outlined),
+              icon: const Icon(Icons.logout_rounded, color: Colors.white),
             ),
           const SizedBox(width: 8),
         ],
@@ -437,8 +559,8 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
 
   Widget _buildContent() {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final section = widget.sections[_selectedIndex];
+    final isDark = theme.brightness == Brightness.dark;
 
     return SafeArea(
       child: Center(
@@ -449,51 +571,33 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Card.filled(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: colors.primaryContainer,
-                          foregroundColor: colors.onPrimaryContainer,
-                          child: Icon(widget.roleIcon, size: 28),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.profile.displayName,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.profile.role.label,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                // ── User profile card ────────────────────────────────────
+                _UserProfileCard(
+                  profile: widget.profile,
+                  roleIcon: widget.roleIcon,
+                  isDark: isDark,
                 ),
-                const SizedBox(height: 24),
-                Text(section.title, style: theme.textTheme.headlineSmall),
-                const SizedBox(height: 8),
+                const SizedBox(height: 20),
+
+                // ── Section header ────────────────────────────────────────
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(section.title, style: theme.textTheme.headlineSmall),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // ── Content ───────────────────────────────────────────────
                 if (_selectedIndex == 0) ...[
-                  Text(
-                    'Chọn một mục để tiếp tục.',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 20),
                   _buildFeatureCards(),
                 ] else if (widget.profile.role == UserRole.employee &&
                     _selectedIndex == 1)
@@ -519,7 +623,7 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
 
   Widget _buildFeatureCards() => LayoutBuilder(
     builder: (context, constraints) {
-      const gap = 12.0;
+      const gap = 14.0;
       final width = constraints.maxWidth;
       final columns = width >= 760 ? 3 : (width >= 500 ? 2 : 1);
       final cardWidth = (width - (columns - 1) * gap) / columns;
@@ -531,66 +635,10 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
           for (var index = 1; index < widget.sections.length; index++)
             SizedBox(
               width: cardWidth,
-              child: Card(
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => _selectSection(index),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(widget.sections[index].icon, size: 30),
-                        const SizedBox(height: 20),
-                        Text(
-                          widget.sections[index].title,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          widget.profile.role == UserRole.admin && index == 1
-                              ? 'Xem danh sách tài khoản'
-                              : widget.profile.role == UserRole.admin &&
-                                    index == 5
-                              ? 'Thiết lập vị trí chấm công'
-                              : widget.profile.role == UserRole.admin &&
-                                    index == 6
-                              ? 'Đăng ký và thu hồi thẻ NFC'
-                              : (widget.profile.role == UserRole.admin &&
-                                        index == 7) ||
-                                    (widget.profile.role == UserRole.manager &&
-                                        index == 6)
-                              ? 'Quét thẻ và xem trạng thái chấm công hôm nay'
-                              : (widget.profile.role == UserRole.admin &&
-                                        index == 8) ||
-                                    (widget.profile.role == UserRole.manager &&
-                                        index == 2)
-                              ? 'Xem và điều chỉnh chấm công thủ công'
-                              : (widget.profile.role == UserRole.admin &&
-                                        index == 3) ||
-                                    (widget.profile.role == UserRole.manager &&
-                                        index == 5)
-                              ? 'Xem giờ công và lương tạm tính'
-                              : (widget.profile.role == UserRole.admin &&
-                                        index == 2) ||
-                                    (widget.profile.role == UserRole.manager &&
-                                        index == 4)
-                              ? 'Xem thống kê chấm công theo kỳ'
-                              : widget.profile.role == UserRole.employee &&
-                                    index == 1
-                              ? 'Xem giờ hiện tại và chấm công'
-                              : widget.profile.role == UserRole.employee &&
-                                    index == 2
-                              ? 'Xem các lần chấm công đã ghi nhận'
-                              : widget.profile.role == UserRole.employee &&
-                                    index == 5
-                              ? 'Xem thống kê chấm công của bạn'
-                              : 'Đang phát triển',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              child: _FeatureCard(
+                section: widget.sections[index],
+                subtitle: _cardSubtitle(index),
+                onTap: () => _selectSection(index),
               ),
             ),
         ],
@@ -598,25 +646,304 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
     },
   );
 
+  String _cardSubtitle(int index) {
+    if (widget.profile.role == UserRole.admin && index == 1) {
+      return 'Xem danh sách tài khoản';
+    } else if (widget.profile.role == UserRole.admin && index == 5) {
+      return 'Thiết lập vị trí chấm công';
+    } else if (widget.profile.role == UserRole.admin && index == 6) {
+      return 'Đăng ký và thu hồi thẻ NFC';
+    } else if ((widget.profile.role == UserRole.admin && index == 7) ||
+        (widget.profile.role == UserRole.manager && index == 6)) {
+      return 'Quét thẻ và xem trạng thái chấm công hôm nay';
+    } else if ((widget.profile.role == UserRole.admin && index == 8) ||
+        (widget.profile.role == UserRole.manager && index == 2)) {
+      return 'Xem và điều chỉnh chấm công thủ công';
+    } else if ((widget.profile.role == UserRole.admin && index == 3) ||
+        (widget.profile.role == UserRole.manager && index == 5)) {
+      return 'Xem giờ công và lương tạm tính';
+    } else if ((widget.profile.role == UserRole.admin && index == 2) ||
+        (widget.profile.role == UserRole.manager && index == 4)) {
+      return 'Xem thống kê chấm công theo kỳ';
+    } else if (widget.profile.role == UserRole.employee && index == 1) {
+      return 'Xem giờ hiện tại và chấm công';
+    } else if (widget.profile.role == UserRole.employee && index == 2) {
+      return 'Xem các lần chấm công đã ghi nhận';
+    } else if (widget.profile.role == UserRole.employee && index == 5) {
+      return 'Xem thống kê chấm công của bạn';
+    }
+    return 'Đang phát triển';
+  }
+
   Widget _buildComingSoon(_HomeSection section) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Card.filled(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: Column(
-          children: [
-            Icon(section.icon, size: 52, color: colors.primary),
-            const SizedBox(height: 16),
-            Text(
-              section.title,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A2444) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 40 : 12),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: section.color.withAlpha(25),
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(height: 8),
-            const Text('Đang phát triển', textAlign: TextAlign.center),
-          ],
+            child: Icon(section.icon, size: 38, color: section.color),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            section.title,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3D5AF1).withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Đang phát triển',
+              style: TextStyle(
+                color: const Color(0xFF3D5AF1),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reusable widgets ──────────────────────────────────────────────────────────
+
+class _UserProfileCard extends StatelessWidget {
+  const _UserProfileCard({
+    required this.profile,
+    required this.roleIcon,
+    required this.isDark,
+  });
+
+  final UserProfile profile;
+  final IconData roleIcon;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? AppTheme.darkPrimaryGradient
+            : AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3D5AF1).withAlpha(isDark ? 50 : 70),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Avatar
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(30),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withAlpha(60),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(roleIcon, size: 28, color: Colors.white),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile.displayName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(30),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    profile.role.label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Online indicator
+          Column(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF69F0AE),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x5569F0AE),
+                      blurRadius: 6,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Online',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureCard extends StatefulWidget {
+  const _FeatureCard({
+    required this.section,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final _HomeSection section;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  State<_FeatureCard> createState() => _FeatureCardState();
+}
+
+class _FeatureCardState extends State<_FeatureCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = widget.section.color;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(0, _hovered ? -4.0 : 0.0, 0),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1A2444) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: color.withAlpha(_hovered ? 60 : 20),
+                blurRadius: _hovered ? 24 : 12,
+                offset: Offset(0, _hovered ? 8.0 : 4.0),
+              ),
+            ],
+            border: Border.all(
+              color: _hovered ? color.withAlpha(80) : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon container
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(isDark ? 40 : 25),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(widget.section.icon, size: 28, color: color),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                widget.section.title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              // Arrow chip
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Xem thêm',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_rounded, size: 14, color: color),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
