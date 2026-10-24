@@ -158,10 +158,15 @@ class _FakeHistoryRepository implements AttendanceRepository {
   Future<AttendanceRecord?> loadToday(String employeeId) async => null;
 
   @override
-  Future<AttendanceRecord> checkIn(String employeeId) async =>
-      throw UnimplementedError();
+  Future<AttendanceRecord> checkIn(
+    String employeeId, {
+    String method = 'biometric',
+    String? cardUid,
+  }) async => throw UnimplementedError();
 
   @override
-  Future<AttendanceRecord> checkOut(String employeeId) async =>
-      throw UnimplementedError();
+  Future<AttendanceRecord> checkOut(
+    String employeeId, {
+    String? cardUid,
+  }) async => throw UnimplementedError();
 }

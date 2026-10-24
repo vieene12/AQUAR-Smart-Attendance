@@ -1,8 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:smart_attendance/core/nfc/nfc_uid.dart';
 
 class AttendanceUnauthorizedException implements Exception {
   const AttendanceUnauthorizedException();
+}
+
+class AttendanceSessionExpiredException implements Exception {
+  const AttendanceSessionExpiredException();
 }
 
 class AttendanceAlreadyCheckedInException implements Exception {
@@ -23,6 +29,36 @@ class AttendanceUnconfirmedException implements Exception {
 
 class AttendanceKioskOnlyException implements Exception {
   const AttendanceKioskOnlyException();
+}
+
+class AttendanceNfcNotAssignedException implements Exception {
+  const AttendanceNfcNotAssignedException();
+}
+
+class AttendanceNfcCardUnregisteredException implements Exception {
+  const AttendanceNfcCardUnregisteredException();
+}
+
+class AttendanceNfcCardNotOwnedException implements Exception {
+  const AttendanceNfcCardNotOwnedException();
+}
+
+void validateEmployeeNfcCard({
+  required String employeeId,
+  required String cardUid,
+  required String? assignedUid,
+  required Map<String, dynamic>? cardData,
+}) {
+  if (assignedUid == null || assignedUid.isEmpty) {
+    throw const AttendanceNfcNotAssignedException();
+  }
+  if (cardData == null ||
+      (cardData['status'] != null && cardData['status'] != 'active')) {
+    throw const AttendanceNfcCardUnregisteredException();
+  }
+  if (assignedUid != cardUid || cardData['employeeUid'] != employeeId) {
+    throw const AttendanceNfcCardNotOwnedException();
+  }
 }
 
 class AttendanceRecord {
@@ -63,8 +99,12 @@ String workDateFromCalendarDate(DateTime date) {
 
 abstract class AttendanceRepository {
   Future<AttendanceRecord?> loadToday(String employeeId);
-  Future<AttendanceRecord> checkIn(String employeeId, {String method = 'biometric'});
-  Future<AttendanceRecord> checkOut(String employeeId);
+  Future<AttendanceRecord> checkIn(
+    String employeeId, {
+    String method = 'biometric',
+    String? cardUid,
+  });
+  Future<AttendanceRecord> checkOut(String employeeId, {String? cardUid});
   Future<List<AttendanceRecord>> loadHistory(
     String employeeId, {
     DateTime? startDate,
@@ -153,10 +193,17 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
   Future<AttendanceRecord> checkIn(
     String employeeId, {
     String method = 'biometric',
+    String? cardUid,
   }) async {
     if (!['biometric', 'nfc_mobile'].contains(method)) {
       throw ArgumentError.value(method, 'method');
     }
+    if ((method == 'nfc_mobile') != (cardUid != null)) {
+      throw ArgumentError.value(cardUid, 'cardUid');
+    }
+    final normalizedCardUid = cardUid == null
+        ? null
+        : normalizeCardUid(cardUid);
     final user = _ensureSignedIn(employeeId);
     await user.reload();
     _ensureSignedIn(employeeId);
@@ -166,6 +213,9 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
     final profile = _firestore.collection('users').doc(employeeId);
 
     await _firestore.runTransaction<void>((transaction) async {
+      if (normalizedCardUid != null) {
+        debugPrint('NFC Employee: đọc hồ sơ users trong transaction.');
+      }
       final profileSnapshot = await transaction.get(profile);
       final profileData = profileSnapshot.data();
       if (profileData?['role'] != 'employee' ||
@@ -173,6 +223,13 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
         throw const AttendanceUnauthorizedException();
       }
 
+      if (normalizedCardUid != null) {
+        await _verifyNfcCard(transaction, employeeId, normalizedCardUid);
+      }
+
+      if (normalizedCardUid != null) {
+        debugPrint('NFC Employee: đọc bản ghi attendance trong transaction.');
+      }
       final existing = await transaction.get(document);
       if (existing.exists) {
         throw const AttendanceAlreadyCheckedInException();
@@ -184,7 +241,11 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
         'checkInAt': FieldValue.serverTimestamp(),
         'method': method,
         'status': 'working',
+        'nfcCardUid': ?normalizedCardUid,
       });
+      if (normalizedCardUid != null) {
+        debugPrint('NFC Employee: gửi transaction tạo attendance.');
+      }
     });
 
     // Chỉ trả thành công khi đọc được giờ vào đã được server ghi nhận.
@@ -198,7 +259,13 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
   }
 
   @override
-  Future<AttendanceRecord> checkOut(String employeeId) async {
+  Future<AttendanceRecord> checkOut(
+    String employeeId, {
+    String? cardUid,
+  }) async {
+    final normalizedCardUid = cardUid == null
+        ? null
+        : normalizeCardUid(cardUid);
     final user = _ensureSignedIn(employeeId);
     await user.reload();
     _ensureSignedIn(employeeId);
@@ -208,6 +275,9 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
     final profile = _firestore.collection('users').doc(employeeId);
 
     await _firestore.runTransaction<void>((transaction) async {
+      if (normalizedCardUid != null) {
+        debugPrint('NFC Employee: đọc hồ sơ users trong transaction.');
+      }
       final profileSnapshot = await transaction.get(profile);
       final profileData = profileSnapshot.data();
       if (profileData?['role'] != 'employee' ||
@@ -215,6 +285,13 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
         throw const AttendanceUnauthorizedException();
       }
 
+      if (normalizedCardUid != null) {
+        await _verifyNfcCard(transaction, employeeId, normalizedCardUid);
+      }
+
+      if (normalizedCardUid != null) {
+        debugPrint('NFC Employee: đọc bản ghi attendance trong transaction.');
+      }
       final existing = await transaction.get(document);
       if (!existing.exists) {
         throw const AttendanceNotCheckedInException();
@@ -234,7 +311,11 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
       transaction.update(document, {
         'checkOutAt': FieldValue.serverTimestamp(),
         'status': 'completed',
+        'checkOutCardUid': ?normalizedCardUid,
       });
+      if (normalizedCardUid != null) {
+        debugPrint('NFC Employee: gửi transaction cập nhật attendance.');
+      }
     });
 
     try {
@@ -251,10 +332,38 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
 
   User _ensureSignedIn(String employeeId) {
     final user = _auth.currentUser;
-    if (user == null || user.uid != employeeId) {
+    if (user == null) {
+      throw const AttendanceSessionExpiredException();
+    }
+    if (user.uid != employeeId) {
       throw const AttendanceUnauthorizedException();
     }
     return user;
+  }
+
+  Future<void> _verifyNfcCard(
+    Transaction transaction,
+    String employeeId,
+    String cardUid,
+  ) async {
+    debugPrint('NFC Employee: đọc nfc_employee_cards trong transaction.');
+    final link = await transaction.get(
+      _firestore.collection('nfc_employee_cards').doc(employeeId),
+    );
+    final assignedUid = link.data()?['cardUid'];
+    if (assignedUid is! String || assignedUid.isEmpty) {
+      throw const AttendanceNfcNotAssignedException();
+    }
+    debugPrint('NFC Employee: đọc nfc_cards trong transaction.');
+    final card = await transaction.get(
+      _firestore.collection('nfc_cards').doc(cardUid),
+    );
+    validateEmployeeNfcCard(
+      employeeId: employeeId,
+      cardUid: cardUid,
+      assignedUid: assignedUid,
+      cardData: card.data(),
+    );
   }
 
   DocumentReference<Map<String, dynamic>> _attendanceDocument(
@@ -274,9 +383,12 @@ class FirestoreAttendanceRepository implements AttendanceRepository {
     final checkInAt = data?['checkInAt'];
     if (data?['employeeId'] != employeeId ||
         data?['workDate'] != workDate ||
-        !['biometric', 'nfc', 'nfc_mobile', 'manual'].contains(
-          data?['method'],
-        ) ||
+        ![
+          'biometric',
+          'nfc',
+          'nfc_mobile',
+          'manual',
+        ].contains(data?['method']) ||
         checkInAt is! Timestamp) {
       throw const AttendanceUnconfirmedException();
     }

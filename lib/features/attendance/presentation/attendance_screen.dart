@@ -468,7 +468,11 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   }
 
   Future<void> _scanNfc() async {
-    if (_scanningNfc || _nfcAvailability != NfcAvailability.enabled) return;
+    if (_scanningNfc ||
+        _savingNfcAttendance ||
+        _nfcAvailability != NfcAvailability.enabled) {
+      return;
+    }
     final scanSerial = ++_nfcScanSerial;
     setState(() {
       _scanningNfc = true;
@@ -493,20 +497,22 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       }
       _nfcStartFuture = _nfcReader.start(
         onTag: (uid) {
-          if (!_scanningNfc ||
-              _finishingNfc ||
-              !mounted ||
-              scanSerial != _nfcScanSerial) {
-            return;
-          }
-          final uidHex = nfcUidHex(uid);
-          _finishNfcScan(
-            uid: uidHex,
-            message: uid == null || uid.isEmpty
-                ? 'Đã phát hiện thẻ, nhưng loại thẻ này không cung cấp UID.'
-                : 'Đã đọc thẻ NFC. Đang lưu chấm công...',
-            saveAttendance: uid != null && uid.isNotEmpty,
-          );
+          scheduleMicrotask(() {
+            if (!_scanningNfc ||
+                _finishingNfc ||
+                !mounted ||
+                scanSerial != _nfcScanSerial) {
+              return;
+            }
+            final uidHex = nfcUidHex(uid);
+            _finishNfcScan(
+              uid: uidHex,
+              message: uidHex == null
+                  ? 'Đã phát hiện thẻ, nhưng loại thẻ này không cung cấp UID.'
+                  : 'Đã đọc thẻ NFC. Đang lưu chấm công...',
+              saveAttendance: uidHex != null,
+            );
+          });
         },
       );
       await _nfcStartFuture;
@@ -525,12 +531,15 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     _finishingNfc = true;
     try {
       if (_nfcStartFuture != null) {
+        var startError = false;
         try {
           await _nfcStartFuture;
         } catch (_) {
-          return;
+          startError = true;
         }
-        await _nfcReader.stop();
+        if (!startError) {
+          await _nfcReader.stop();
+        }
       }
     } catch (_) {
       message = 'Không thể kết thúc phiên NFC. Hãy thử lại.';
@@ -546,7 +555,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
           _nfcScanMessage = message;
         });
         if (saveAttendance && uid != null) {
-          await _saveAttendanceWithNfc();
+          await _saveAttendanceWithNfc(uid);
         }
       }
     }
@@ -563,15 +572,18 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     };
   }
 
-  Future<void> _saveAttendanceWithNfc() async {
+  Future<void> _saveAttendanceWithNfc(String cardUid) async {
     if (_savingNfcAttendance || _isAuthenticating) return;
     final checkIn = _record == null;
-    final checkOut = _record != null &&
+    final checkOut =
+        _record != null &&
         _record!.checkOutAt == null &&
         _record!.method != 'nfc' &&
         _record!.method != 'manual';
     if (!checkIn && !checkOut) {
-      setState(() => _nfcScanMessage = 'Không thể chấm công: trạng thái không hợp lệ.');
+      setState(
+        () => _nfcScanMessage = 'Không thể chấm công: trạng thái không hợp lệ.',
+      );
       return;
     }
     var writeAttempted = false;
@@ -579,6 +591,9 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       _savingNfcAttendance = true;
       _nfcScanMessage = null;
     });
+    debugPrint(
+      'NFC Employee: UID đã đọc; đang ghi Firestore attendance (${checkIn ? 'check-in' : 'check-out'}).',
+    );
     try {
       await _locationGate.verify();
       if (!mounted) return;
@@ -587,8 +602,10 @@ class _AttendanceScreenState extends State<AttendanceScreen>
           ? await _repository.checkIn(
               widget.employeeId,
               method: 'nfc_mobile',
+              cardUid: cardUid,
             )
-          : await _repository.checkOut(widget.employeeId);
+          : await _repository.checkOut(widget.employeeId, cardUid: cardUid);
+      debugPrint('NFC Employee: Firestore xác nhận bản ghi attendance.');
       if (!mounted) return;
       ++_loadRequestSerial;
       setState(() {
@@ -597,10 +614,15 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         _loadError = null;
         _nfcScanMessage = null;
       });
-      _showMessage(checkIn ? 'Check-in NFC thành công.' : 'Check-out NFC thành công.');
+      _showMessage(
+        checkIn ? 'Check-in NFC thành công.' : 'Check-out NFC thành công.',
+      );
     } on AttendanceLocationNotConfiguredException {
       if (mounted) {
-        setState(() => _nfcScanMessage = 'Chưa có cấu hình vị trí chấm công. Hãy liên hệ Admin.');
+        setState(
+          () => _nfcScanMessage =
+              'Chưa có cấu hình vị trí chấm công. Hãy liên hệ Admin.',
+        );
       }
     } on AttendanceLocationConfigUnavailableException catch (error) {
       if (mounted) {
@@ -614,7 +636,9 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         );
       }
     } on LocationServiceException catch (error) {
-      if (mounted) setState(() => _nfcScanMessage = _locationErrorMessage(error));
+      if (mounted) {
+        setState(() => _nfcScanMessage = _locationErrorMessage(error));
+      }
     } on AttendanceAlreadyCheckedInException {
       if (!mounted) return;
       await _loadToday();
@@ -622,33 +646,81 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     } on AttendanceNotCheckedInException {
       if (!mounted) return;
       await _loadToday();
-      if (mounted) setState(() => _nfcScanMessage = 'Bạn cần check-in trước khi check-out.');
+      if (mounted) {
+        setState(
+          () => _nfcScanMessage = 'Bạn cần check-in trước khi check-out.',
+        );
+      }
     } on AttendanceAlreadyCheckedOutException {
       if (!mounted) return;
       await _loadToday();
-      if (mounted) setState(() => _nfcScanMessage = 'Hôm nay bạn đã check-out.');
+      if (mounted) {
+        setState(() => _nfcScanMessage = 'Hôm nay bạn đã check-out.');
+      }
     } on AttendanceKioskOnlyException {
-      if (mounted) setState(() => _nfcScanMessage = 'Bản ghi NFC tại quầy cần Check-out tại quầy.');
+      if (mounted) {
+        setState(
+          () =>
+              _nfcScanMessage = 'Bản ghi NFC tại quầy cần Check-out tại quầy.',
+        );
+      }
     } on AttendanceUnconfirmedException {
       if (mounted) {
         _markUnconfirmed();
-        setState(() => _nfcScanMessage = 'Chưa xác nhận được kết quả lưu. Hãy tải lại trạng thái.');
+        setState(
+          () => _nfcScanMessage =
+              'Chưa xác nhận được kết quả lưu. Hãy tải lại trạng thái.',
+        );
       }
     } on AttendanceUnauthorizedException {
       if (mounted) {
         setState(() => _nfcScanMessage = 'Tài khoản không có quyền chấm công.');
       }
+    } on AttendanceSessionExpiredException {
+      if (mounted) {
+        setState(
+          () => _nfcScanMessage =
+              'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+        );
+      }
+    } on AttendanceNfcNotAssignedException {
+      if (mounted) {
+        setState(
+          () => _nfcScanMessage = 'Tài khoản của bạn chưa được đăng ký thẻ NFC. Vui lòng liên hệ quản trị viên.',
+        );
+      }
+    } on AttendanceNfcCardUnregisteredException {
+      if (mounted) {
+        setState(
+          () => _nfcScanMessage = 'Thẻ NFC chưa được đăng ký trong hệ thống.',
+        );
+      }
+    } on AttendanceNfcCardNotOwnedException {
+      if (mounted) {
+        setState(
+          () => _nfcScanMessage = 'Thẻ NFC này không thuộc tài khoản của bạn.',
+        );
+      }
     } on FirebaseException catch (error) {
+      debugPrint('NFC Employee: Firestore ${error.code}.');
       if (mounted) {
         if (writeAttempted && error.code != 'permission-denied') {
           _markUnconfirmed();
         }
-        setState(() => _nfcScanMessage = _repositoryErrorMessage(error));
+        setState(
+          () => _nfcScanMessage = error.code == 'permission-denied'
+              ? 'Máy chủ chưa cấp quyền chấm công NFC. Vui lòng liên hệ quản trị viên để cập nhật Firestore Rules.'
+              : _repositoryErrorMessage(error),
+        );
       }
     } catch (_) {
+      debugPrint('NFC Employee: lỗi không xác định khi lưu attendance.');
       if (mounted) {
         if (writeAttempted) _markUnconfirmed();
-        setState(() => _nfcScanMessage = 'Không thể hoàn tất chấm công NFC. Vui lòng thử lại.');
+        setState(
+          () => _nfcScanMessage =
+              'Không thể hoàn tất chấm công NFC. Vui lòng thử lại.',
+        );
       }
     } finally {
       if (mounted) setState(() => _savingNfcAttendance = false);
@@ -798,6 +870,9 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   }
 
   String _repositoryErrorMessage(Object error) {
+    if (error is AttendanceSessionExpiredException) {
+      return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+    }
     if (error is AttendanceUnauthorizedException ||
         error is FirebaseException && error.code == 'permission-denied') {
       return 'Không có quyền chấm công. Kiểm tra tài khoản, Rules và ngày giờ thiết bị.';

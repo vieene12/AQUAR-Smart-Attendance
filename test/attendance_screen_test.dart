@@ -602,23 +602,21 @@ void main() {
     // Sau khi đọc UID thành công, phải gọi checkIn
     expect(repository.checkInCalls, 1);
     expect(repository.checkOutCalls, 0);
-    expect(
-      find.text('Check-in NFC thành công.'),
-      findsOneWidget,
-    );
+    expect(repository.lastCardUid, '040AFF');
+    expect(find.text('Check-in NFC thành công.'), findsOneWidget);
   });
 
   testWidgets('quét thẻ NFC tự động gọi check-out khi đã có bản ghi đang làm', (
     tester,
   ) async {
     final reader = _FakeNfcTagReader();
-    final repository =
-        _FakeAttendanceRepository()..record = AttendanceRecord(
-          employeeId: 'employee-1',
-          workDate: '2026-10-10',
-          checkInAt: DateTime.utc(2026, 10, 10, 2),
-          method: 'nfc_mobile',
-        );
+    final repository = _FakeAttendanceRepository()
+      ..record = AttendanceRecord(
+        employeeId: 'employee-1',
+        workDate: '2026-10-10',
+        checkInAt: DateTime.utc(2026, 10, 10, 2),
+        method: 'nfc_mobile',
+      );
     await _pumpAttendance(
       tester,
       _FakeBiometricAuthenticator(),
@@ -638,7 +636,181 @@ void main() {
     expect(reader.stopCalls, 1);
     expect(repository.checkInCalls, 0);
     expect(repository.checkOutCalls, 1);
+    expect(repository.lastCardUid, '0102');
     expect(find.text('Check-out NFC thành công.'), findsOneWidget);
+  });
+
+  testWidgets('một lần quét lặp chỉ ghi một lần và vẫn ở màn chấm công', (
+    tester,
+  ) async {
+    final reader = _FakeNfcTagReader();
+    final repository = _FakeAttendanceRepository();
+    await _pumpAttendance(
+      tester,
+      _FakeBiometricAuthenticator(),
+      repository,
+      _FakeNfcChecker(NfcAvailability.enabled),
+      null,
+      reader,
+    );
+    await tester.ensureVisible(find.text('Thẻ NFC'));
+    await tester.tap(find.text('Thẻ NFC'));
+    await tester.pump();
+    await tester.tap(find.text('Quét thẻ NFC'));
+    await tester.pump();
+    final onTag = reader.onTag!;
+    onTag(Uint8List.fromList([0x04, 0x0a]));
+    onTag(Uint8List.fromList([0x04, 0x0a]));
+    await tester.pump();
+    await tester.pump();
+    expect(repository.checkInCalls, 1);
+    expect(reader.stopCalls, 1);
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+  });
+
+  testWidgets('thẻ không thuộc nhân viên báo lỗi và giữ màn hình', (
+    tester,
+  ) async {
+    final reader = _FakeNfcTagReader();
+    final repository = _FakeAttendanceRepository()
+      ..checkInError = const AttendanceNfcCardNotOwnedException();
+    await _pumpAttendance(
+      tester,
+      _FakeBiometricAuthenticator(),
+      repository,
+      _FakeNfcChecker(NfcAvailability.enabled),
+      null,
+      reader,
+    );
+    await tester.ensureVisible(find.text('Thẻ NFC'));
+    await tester.tap(find.text('Thẻ NFC'));
+    await tester.pump();
+    await tester.tap(find.text('Quét thẻ NFC'));
+    await tester.pump();
+    reader.discover(Uint8List.fromList([0x04, 0x0a]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('không thuộc tài khoản'), findsOneWidget);
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+    expect(find.text('Check-in NFC thành công.'), findsNothing);
+  });
+
+  for (final (error, message) in [
+    (
+      const AttendanceNfcCardUnregisteredException(),
+      'Thẻ NFC chưa được đăng ký trong hệ thống.',
+    ),
+    (
+      const AttendanceNfcNotAssignedException(),
+      'Tài khoản của bạn chưa được đăng ký thẻ NFC.',
+    ),
+  ]) {
+    testWidgets('quét NFC báo đúng lỗi: $message', (tester) async {
+      final reader = _FakeNfcTagReader();
+      final repository = _FakeAttendanceRepository()..checkInError = error;
+      await _pumpAttendance(
+        tester,
+        _FakeBiometricAuthenticator(),
+        repository,
+        _FakeNfcChecker(NfcAvailability.enabled),
+        null,
+        reader,
+      );
+      await tester.ensureVisible(find.text('Thẻ NFC'));
+      await tester.tap(find.text('Thẻ NFC'));
+      await tester.pump();
+      await tester.tap(find.text('Quét thẻ NFC'));
+      await tester.pump();
+      reader.discover(Uint8List.fromList([0x04, 0x0a]));
+      await tester.pump();
+      await tester.pump();
+      expect(find.textContaining(message), findsOneWidget);
+      expect(find.byType(AttendanceScreen), findsOneWidget);
+      expect(find.text('Check-in NFC thành công.'), findsNothing);
+    });
+  }
+
+  testWidgets('hết phiên đăng nhập khi quét NFC hướng dẫn đăng nhập lại', (
+    tester,
+  ) async {
+    final reader = _FakeNfcTagReader();
+    final repository = _FakeAttendanceRepository()
+      ..checkInError = const AttendanceSessionExpiredException();
+    await _pumpAttendance(
+      tester,
+      _FakeBiometricAuthenticator(),
+      repository,
+      _FakeNfcChecker(NfcAvailability.enabled),
+      null,
+      reader,
+    );
+    await tester.ensureVisible(find.text('Thẻ NFC'));
+    await tester.tap(find.text('Thẻ NFC'));
+    await tester.pump();
+    await tester.tap(find.text('Quét thẻ NFC'));
+    await tester.pump();
+    reader.discover(Uint8List.fromList([0x04, 0x0a]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Vui lòng đăng nhập lại'), findsOneWidget);
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+  });
+
+  testWidgets('Rules chưa cấp quyền NFC báo rõ và giữ màn hình', (
+    tester,
+  ) async {
+    final reader = _FakeNfcTagReader();
+    final repository = _FakeAttendanceRepository()
+      ..checkInError = FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'permission-denied',
+      );
+    await _pumpAttendance(
+      tester,
+      _FakeBiometricAuthenticator(),
+      repository,
+      _FakeNfcChecker(NfcAvailability.enabled),
+      null,
+      reader,
+    );
+    await tester.ensureVisible(find.text('Thẻ NFC'));
+    await tester.tap(find.text('Thẻ NFC'));
+    await tester.pump();
+    await tester.tap(find.text('Quét thẻ NFC'));
+    await tester.pump();
+    reader.discover(Uint8List.fromList([0x04, 0x0a]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('cập nhật Firestore Rules'), findsOneWidget);
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+  });
+
+  testWidgets('mất mạng khi quét NFC báo lỗi và giữ màn hình', (tester) async {
+    final reader = _FakeNfcTagReader();
+    final repository = _FakeAttendanceRepository()
+      ..checkInError = FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'unavailable',
+      );
+    await _pumpAttendance(
+      tester,
+      _FakeBiometricAuthenticator(),
+      repository,
+      _FakeNfcChecker(NfcAvailability.enabled),
+      null,
+      reader,
+    );
+    await tester.ensureVisible(find.text('Thẻ NFC'));
+    await tester.tap(find.text('Thẻ NFC'));
+    await tester.pump();
+    await tester.tap(find.text('Quét thẻ NFC'));
+    await tester.pump();
+    reader.discover(Uint8List.fromList([0x04, 0x0a]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+    expect(find.text('Check-in NFC thành công.'), findsNothing);
+    expect(find.textContaining('kết nối'), findsWidgets);
   });
 
   testWidgets('quét thẻ NFC UID rỗng không chấm công', (tester) async {
@@ -819,6 +991,7 @@ class _FakeAttendanceRepository implements AttendanceRepository {
   int checkInCalls = 0;
   int checkOutCalls = 0;
   int loadCalls = 0;
+  String? lastCardUid;
 
   @override
   Future<AttendanceRecord?> loadToday(String employeeId) async {
@@ -831,8 +1004,10 @@ class _FakeAttendanceRepository implements AttendanceRepository {
   Future<AttendanceRecord> checkIn(
     String employeeId, {
     String method = 'biometric',
+    String? cardUid,
   }) async {
     checkInCalls++;
+    lastCardUid = cardUid;
     if (checkInError != null) throw checkInError!;
     return record = AttendanceRecord(
       employeeId: employeeId,
@@ -843,8 +1018,12 @@ class _FakeAttendanceRepository implements AttendanceRepository {
   }
 
   @override
-  Future<AttendanceRecord> checkOut(String employeeId) async {
+  Future<AttendanceRecord> checkOut(
+    String employeeId, {
+    String? cardUid,
+  }) async {
     checkOutCalls++;
+    lastCardUid = cardUid;
     if (checkOutError != null) {
       throw checkOutError!;
     }
