@@ -20,6 +20,8 @@ class SmartAttendanceApp extends StatelessWidget {
       ],
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      // Luôn dùng giao diện sáng, không phụ thuộc cài đặt hệ thống.
+      themeMode: ThemeMode.light,
       home: const SplashScreen(),
     );
   }
