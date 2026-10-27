@@ -137,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
                   FadeTransition(
                     opacity: _fadeAnim,
                     child: const Text(
-                      'Smart Attendance',
+                      'Aquar Smart Attendance',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 30,

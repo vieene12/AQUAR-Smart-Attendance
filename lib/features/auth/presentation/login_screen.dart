@@ -219,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               const SizedBox(height: 20),
                               const Text(
-                                'Smart Attendance',
+                                'Aquar Smart Attendance',
                                 style: TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w800,

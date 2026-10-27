@@ -335,12 +335,25 @@ service cloud.firestore {
     function validAccountEdit() {
       let data = request.resource.data;
       return resource.data.role in ['manager', 'employee']
-        && data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'hourlyRate'])
+        && data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'hourlyRate',
+          'employeeCode', 'position', 'shiftStart', 'shiftEnd', 'managerUid'])
         && data.fullName is string
         && data.fullName.size() > 0
         && data.fullName.size() <= 100
         && data.hourlyRate is int
-        && data.hourlyRate >= 0;
+        && data.hourlyRate >= 0
+        && (!('employeeCode' in data) || (resource.data.role == 'employee'
+          && data.employeeCode is string && data.employeeCode.size() > 0 && data.employeeCode.size() <= 40))
+        && (!('position' in data) || (resource.data.role == 'employee'
+          && data.position is string && data.position.size() > 0 && data.position.size() <= 100))
+        && (!('shiftStart' in data) || (resource.data.role == 'employee'
+          && data.shiftStart is string && data.shiftStart.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+        && (!('shiftEnd' in data) || (resource.data.role == 'employee'
+          && data.shiftEnd is string && data.shiftEnd.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+        && (!('managerUid' in data) || (resource.data.role == 'employee'
+          && data.managerUid is string
+          && exists(/databases/$(database)/documents/users/$(data.managerUid))
+          && get(/databases/$(database)/documents/users/$(data.managerUid)).data.role == 'manager'));
     }
 
     function validStatusChange(userId) {

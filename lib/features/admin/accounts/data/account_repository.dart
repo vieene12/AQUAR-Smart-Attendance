@@ -22,10 +22,20 @@ class AccountRepository {
     required String uid,
     required String fullName,
     required int hourlyRate,
+    String? employeeCode,
+    String? position,
+    String? shiftStart,
+    String? shiftEnd,
+    String? managerUid,
   }) {
     return _firestore.collection('users').doc(uid).update({
       'fullName': fullName,
       'hourlyRate': hourlyRate,
+      'employeeCode': employeeCode ?? FieldValue.delete(),
+      'position': position ?? FieldValue.delete(),
+      'shiftStart': shiftStart ?? FieldValue.delete(),
+      'shiftEnd': shiftEnd ?? FieldValue.delete(),
+      'managerUid': managerUid ?? FieldValue.delete(),
     });
   }
 

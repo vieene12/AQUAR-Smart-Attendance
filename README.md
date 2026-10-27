@@ -1,4 +1,14 @@
-# Smart Attendance
+# Aquar Smart Attendance
+
+## Gửi báo cáo và bảng lương qua email
+
+Admin dùng mục **Gửi email**; Quản lý cũng có mục này cho nhân viên trong phạm vi phụ trách. Chọn tuần/tháng/quý/năm, một hoặc nhiều nhân viên, **Chọn tất cả**. Thanh thao tác cố định cho phép gửi email hoặc xuất file ngay trên màn hình danh sách. Chọn một người để mở hai tab **Chấm công** và **Bảng lương**, xem trước/in/lưu PDF hoặc gửi email. Chọn nhiều người để lưu một ZIP chứa PDF riêng của từng người; thao tác hàng loạt không mở từng trang báo cáo. Kết quả gửi và lỗi xuất hiển thị riêng từng người. Nút email trong **Báo cáo thống kê** dẫn tới cùng màn hình gửi mới. Xem [hướng dẫn Cloud Functions](functions/README.md) để cấu hình SMTP và triển khai backend trước khi gửi email thật.
+
+## Nhân viên phụ trách và lịch sử
+
+Admin mở **Quản lý nhân viên → Chỉnh sửa tài khoản** để nhập mã nhân viên (`employeeCode`), chức vụ (`position`), giờ bắt đầu/kết thúc ca (`shiftStart`, `shiftEnd`, định dạng `HH:mm`) và gán quản lý (`managerUid`) cho hồ sơ nhân viên trong `users/{uid}`. Hồ sơ cũ chưa có các trường này sẽ hiển thị “Chưa cập nhật”. Quản lý thấy nhân viên được gán cho mình và nhân viên chưa được phân công; nhân viên đã gán cho quản lý khác không hiển thị. Admin nên phân công các hồ sơ cũ để giới hạn danh sách đúng theo người phụ trách. Không dùng dữ liệu giả hoặc giờ ca mặc định.
+
+Mục **Nhân viên phụ trách** của quản lý đọc bản ghi `attendance` của ngày Việt Nam hiện tại, chỉ hiển thị trạng thái `working` chưa có `checkOutAt`. Mục **Lịch sử** của quản lý/admin đọc check-in/check-out thật theo hôm nay, tuần này hoặc tháng này; nhân viên tiếp tục chỉ xem lịch sử của chính mình. Nhấn **Làm mới** để lấy trạng thái mới từ Firestore. Sau khi cập nhật [firestore.rules](firestore.rules), cần triển khai Rules lên Firebase project thật trước khi lưu các trường hồ sơ mới.
 
 Ứng dụng Android chấm công nhân viên bằng Flutter. Hiện có màn hình khởi động, đăng nhập email/mật khẩu bằng Firebase Authentication, kiểm tra hồ sơ Cloud Firestore và điều hướng theo vai trò. Employee có thể Check-in và Check-out vào Firestore sau xác thực sinh trắc học. Chưa có tính lương hoặc báo cáo.
 

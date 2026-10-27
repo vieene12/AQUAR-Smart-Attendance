@@ -8,6 +8,7 @@ import 'package:smart_attendance/features/statistics/data/report_email_composer.
 import 'package:smart_attendance/features/statistics/domain/attendance_statistics_service.dart';
 import 'package:smart_attendance/features/statistics/domain/employee_attendance_pdf.dart';
 import 'package:smart_attendance/features/statistics/domain/report_email_draft.dart';
+import 'package:smart_attendance/features/statistics/presentation/report_dispatch_screen.dart';
 
 class AttendanceReportScreen extends StatefulWidget {
   const AttendanceReportScreen({
@@ -456,7 +457,18 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
                   OutlinedButton.icon(
                     onPressed: busy || stats.attendanceDays == 0
                         ? null
-                        : composeEmail,
+                        : widget.emailComposer != null
+                        ? composeEmail
+                        : () => Navigator.of(detailContext).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => ReportDispatchScreen(
+                                profile: widget.profile,
+                                initialEmployeeUid: uid,
+                                initialKind: _kind,
+                                initialDate: _selectedInstant,
+                              ),
+                            ),
+                          ),
                     icon: const Icon(Icons.email_outlined),
                     label: Text(
                       busyLabel == 'Đang soạn email…'

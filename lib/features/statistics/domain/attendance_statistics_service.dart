@@ -149,7 +149,10 @@ class AttendanceStatisticsService {
           record.manualRevision == null || record.manualRevision! > 0;
       final method = attendance.method;
       final validMethod =
-          method == 'biometric' || method == 'nfc' || method == 'manual';
+          method == 'biometric' ||
+          method == 'nfc' ||
+          method == 'nfc_mobile' ||
+          method == 'manual';
       final checkIn = attendance.checkInAt;
       final validCheckIn =
           checkIn != null &&
@@ -184,6 +187,7 @@ class AttendanceStatisticsService {
           case 'biometric':
             target.biometricRecords++;
           case 'nfc':
+          case 'nfc_mobile':
             target.nfcRecords++;
           case 'manual':
             target.manualRecords++;

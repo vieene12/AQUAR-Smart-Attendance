@@ -45,7 +45,7 @@ class ReportEmailDraft {
           'Kính gửi $name,\n\n'
           'Đính kèm là báo cáo chấm công của bạn cho kỳ $periodText.\n'
           'Vui lòng kiểm tra nội dung báo cáo PDF.\n\n'
-          'Trân trọng,\nSmart Attendance',
+          'Trân trọng,\nAquar Smart Attendance',
     );
   }
 }

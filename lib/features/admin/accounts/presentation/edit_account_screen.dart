@@ -17,6 +17,12 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
   final _repository = AccountRepository();
   late final TextEditingController _nameController;
   late final TextEditingController _hourlyRateController;
+  late final TextEditingController _codeController;
+  late final TextEditingController _positionController;
+  late final TextEditingController _shiftStartController;
+  late final TextEditingController _shiftEndController;
+  late final Future<List<AccountRecord>> _managers;
+  String? _managerUid;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -27,12 +33,30 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     _hourlyRateController = TextEditingController(
       text: widget.account.hourlyRate?.toString() ?? '',
     );
+    _codeController = TextEditingController(
+      text: widget.account.employeeCode ?? '',
+    );
+    _positionController = TextEditingController(
+      text: widget.account.position ?? '',
+    );
+    _shiftStartController = TextEditingController(
+      text: widget.account.shiftStart ?? '',
+    );
+    _shiftEndController = TextEditingController(
+      text: widget.account.shiftEnd ?? '',
+    );
+    _managerUid = widget.account.managerUid;
+    _managers = _repository.getAccounts();
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _hourlyRateController.dispose();
+    _codeController.dispose();
+    _positionController.dispose();
+    _shiftStartController.dispose();
+    _shiftEndController.dispose();
     super.dispose();
   }
 
@@ -51,6 +75,19 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
         uid: widget.account.uid,
         fullName: _nameController.text.trim(),
         hourlyRate: int.parse(_hourlyRateController.text.trim()),
+        employeeCode: widget.account.role == 'employee'
+            ? _optional(_codeController)
+            : null,
+        position: widget.account.role == 'employee'
+            ? _optional(_positionController)
+            : null,
+        shiftStart: widget.account.role == 'employee'
+            ? _optional(_shiftStartController)
+            : null,
+        shiftEnd: widget.account.role == 'employee'
+            ? _optional(_shiftEndController)
+            : null,
+        managerUid: widget.account.role == 'employee' ? _managerUid : null,
       );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -75,6 +112,19 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String? _optional(TextEditingController controller) {
+    final value = controller.text.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  String? _validateTime(String? value) {
+    final input = value?.trim() ?? '';
+    if (input.isEmpty) return null;
+    return RegExp(r'^([01][0-9]|2[0-3]):[0-5][0-9]$').hasMatch(input)
+        ? null
+        : 'Nhập giờ theo định dạng HH:mm.';
   }
 
   @override
@@ -131,6 +181,104 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                             },
                           ),
                           const SizedBox(height: 16),
+                          if (widget.account.role == 'employee') ...[
+                            TextFormField(
+                              controller: _codeController,
+                              enabled: !_isLoading,
+                              decoration: const InputDecoration(
+                                labelText: 'Mã nhân viên',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) =>
+                                  (value?.trim().length ?? 0) > 40
+                                  ? 'Tối đa 40 ký tự.'
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _positionController,
+                              enabled: !_isLoading,
+                              decoration: const InputDecoration(
+                                labelText: 'Chức vụ',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) =>
+                                  (value?.trim().length ?? 0) > 100
+                                  ? 'Tối đa 100 ký tự.'
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _shiftStartController,
+                              enabled: !_isLoading,
+                              decoration: const InputDecoration(
+                                labelText: 'Bắt đầu ca (HH:mm)',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: _validateTime,
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _shiftEndController,
+                              enabled: !_isLoading,
+                              decoration: const InputDecoration(
+                                labelText: 'Kết thúc ca (HH:mm)',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: _validateTime,
+                            ),
+                            const SizedBox(height: 16),
+                            FutureBuilder<List<AccountRecord>>(
+                              future: _managers,
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return Text(
+                                    snapshot.hasError
+                                        ? 'Không tải được danh sách quản lý.'
+                                        : 'Đang tải danh sách quản lý...',
+                                  );
+                                }
+                                final managers = snapshot.data!
+                                    .where(
+                                      (account) => account.role == 'manager',
+                                    )
+                                    .toList();
+                                return DropdownButtonFormField<String>(
+                                  initialValue:
+                                      managers.any(
+                                        (manager) => manager.uid == _managerUid,
+                                      )
+                                      ? _managerUid
+                                      : null,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Quản lý phụ trách',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<String>(
+                                      value: '',
+                                      child: Text('Chưa phân công'),
+                                    ),
+                                    for (final manager in managers)
+                                      DropdownMenuItem(
+                                        value: manager.uid,
+                                        child: Text(
+                                          manager.name ?? manager.uid,
+                                        ),
+                                      ),
+                                  ],
+                                  onChanged: _isLoading
+                                      ? null
+                                      : (uid) => setState(
+                                          () => _managerUid = uid == ''
+                                              ? null
+                                              : uid,
+                                        ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                           TextFormField(
                             controller: _hourlyRateController,
                             enabled: !_isLoading,

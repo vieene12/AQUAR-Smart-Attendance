@@ -5,6 +5,9 @@
 build/
 coverage/
 functions/node_modules/
+functions/.env
+functions/.env.*
+!functions/.env.example
 android/.gradle/
 android/captures/
 android/local.properties

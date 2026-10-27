@@ -9,7 +9,7 @@ class SmartAttendanceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Smart Attendance',
+      title: 'Aquar Smart Attendance',
       debugShowCheckedModeBanner: false,
       locale: const Locale('vi'),
       supportedLocales: const [Locale('vi')],

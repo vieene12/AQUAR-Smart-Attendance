@@ -52,8 +52,8 @@ void main() {
     expect(find.text('Ngày làm: 10/10/2026'), findsOneWidget);
     expect(find.text('Ngày làm: 09/10/2026'), findsOneWidget);
     expect(find.text('Đang làm việc'), findsOneWidget);
-    expect(find.text('Đã kết thúc'), findsOneWidget);
-    expect(find.text('Check-out: Chưa có'), findsOneWidget);
+    expect(find.text('Đã hoàn thành ca'), findsOneWidget);
+    expect(find.text('Check-out: Chưa check-out'), findsOneWidget);
     expect(find.text('Tổng giờ làm: Chưa có'), findsOneWidget);
     expect(find.text('Tổng giờ làm: 8 giờ 30 phút 00 giây'), findsOneWidget);
   });

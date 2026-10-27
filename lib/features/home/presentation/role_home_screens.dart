@@ -11,6 +11,9 @@ import 'package:smart_attendance/features/auth/domain/user_profile.dart';
 import 'package:smart_attendance/features/attendance/data/attendance_repository.dart';
 import 'package:smart_attendance/features/attendance/data/location_service.dart';
 import 'package:smart_attendance/features/attendance/presentation/attendance_history_screen.dart';
+import 'package:smart_attendance/features/attendance/presentation/team_attendance_history_screen.dart';
+import 'package:smart_attendance/features/attendance/presentation/team_on_shift_screen.dart';
+import 'package:smart_attendance/features/attendance/data/team_attendance_repository.dart';
 import 'package:smart_attendance/features/attendance/presentation/attendance_screen.dart';
 import 'package:smart_attendance/features/kiosk/data/nfc_kiosk_repository.dart';
 import 'package:smart_attendance/features/kiosk/presentation/nfc_kiosk_screen.dart';
@@ -23,6 +26,8 @@ import 'package:smart_attendance/features/payroll/presentation/my_salary_screen.
 import 'package:smart_attendance/features/payroll/presentation/payroll_screen.dart';
 import 'package:smart_attendance/features/statistics/data/attendance_report_repository.dart';
 import 'package:smart_attendance/features/statistics/presentation/attendance_report_screen.dart';
+import 'package:smart_attendance/features/statistics/presentation/report_dispatch_screen.dart';
+import 'package:smart_attendance/features/statistics/data/report_dispatch_repository.dart';
 import 'package:smart_attendance/features/statistics/data/my_attendance_report_repository.dart';
 import 'package:smart_attendance/features/statistics/presentation/my_attendance_report_screen.dart';
 
@@ -40,6 +45,8 @@ class AdminHomeScreen extends StatelessWidget {
     this.manualAttendanceRepository,
     this.payrollRepository,
     this.attendanceReportRepository,
+    this.teamAttendanceRepository,
+    this.reportDispatchRepository,
     super.key,
   });
 
@@ -55,6 +62,8 @@ class AdminHomeScreen extends StatelessWidget {
   final ManualAttendanceRepository? manualAttendanceRepository;
   final PayrollRepository? payrollRepository;
   final AttendanceReportRepository? attendanceReportRepository;
+  final TeamAttendanceRepository? teamAttendanceRepository;
+  final ReportDispatchRepository? reportDispatchRepository;
 
   @override
   Widget build(BuildContext context) => _RoleHomeScaffold(
@@ -70,6 +79,8 @@ class AdminHomeScreen extends StatelessWidget {
     manualAttendanceRepository: manualAttendanceRepository,
     payrollRepository: payrollRepository,
     attendanceReportRepository: attendanceReportRepository,
+    teamAttendanceRepository: teamAttendanceRepository,
+    reportDispatchRepository: reportDispatchRepository,
     roleIcon: Icons.admin_panel_settings_outlined,
     sections: const [
       _HomeSection(
@@ -96,12 +107,7 @@ class AdminHomeScreen extends StatelessWidget {
         Icons.payments_rounded,
         Color(0xFF0288D1),
       ),
-      _HomeSection(
-        'Email',
-        'Gửi email',
-        Icons.mail_rounded,
-        Color(0xFF0277BD),
-      ),
+      _HomeSection('Email', 'Gửi email', Icons.mail_rounded, Color(0xFF0277BD)),
       _HomeSection(
         'Vị trí',
         'Vị trí chấm công',
@@ -141,6 +147,8 @@ class ManagerHomeScreen extends StatelessWidget {
     this.manualAttendanceRepository,
     this.payrollRepository,
     this.attendanceReportRepository,
+    this.teamAttendanceRepository,
+    this.reportDispatchRepository,
     super.key,
   });
 
@@ -153,6 +161,8 @@ class ManagerHomeScreen extends StatelessWidget {
   final ManualAttendanceRepository? manualAttendanceRepository;
   final PayrollRepository? payrollRepository;
   final AttendanceReportRepository? attendanceReportRepository;
+  final TeamAttendanceRepository? teamAttendanceRepository;
+  final ReportDispatchRepository? reportDispatchRepository;
 
   @override
   Widget build(BuildContext context) => _RoleHomeScaffold(
@@ -165,6 +175,8 @@ class ManagerHomeScreen extends StatelessWidget {
     manualAttendanceRepository: manualAttendanceRepository,
     payrollRepository: payrollRepository,
     attendanceReportRepository: attendanceReportRepository,
+    teamAttendanceRepository: teamAttendanceRepository,
+    reportDispatchRepository: reportDispatchRepository,
     roleIcon: Icons.manage_accounts_outlined,
     sections: const [
       _HomeSection(
@@ -209,6 +221,7 @@ class ManagerHomeScreen extends StatelessWidget {
         Icons.contactless_rounded,
         Color(0xFF0277BD),
       ),
+      _HomeSection('Email', 'Gửi email', Icons.mail_rounded, Color(0xFF0277BD)),
     ],
   );
 }
@@ -279,12 +292,7 @@ class EmployeeHomeScreen extends StatelessWidget {
 }
 
 class _HomeSection {
-  const _HomeSection(
-    this.navigationLabel,
-    this.title,
-    this.icon,
-    this.color,
-  );
+  const _HomeSection(this.navigationLabel, this.title, this.icon, this.color);
 
   final String navigationLabel;
   final String title;
@@ -311,6 +319,8 @@ class _RoleHomeScaffold extends StatefulWidget {
     this.manualAttendanceRepository,
     this.payrollRepository,
     this.attendanceReportRepository,
+    this.teamAttendanceRepository,
+    this.reportDispatchRepository,
   });
 
   final UserProfile profile;
@@ -330,6 +340,8 @@ class _RoleHomeScaffold extends StatefulWidget {
   final ManualAttendanceRepository? manualAttendanceRepository;
   final PayrollRepository? payrollRepository;
   final AttendanceReportRepository? attendanceReportRepository;
+  final TeamAttendanceRepository? teamAttendanceRepository;
+  final ReportDispatchRepository? reportDispatchRepository;
 
   @override
   State<_RoleHomeScaffold> createState() => _RoleHomeScaffoldState();
@@ -360,21 +372,26 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha(25),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: Colors.white.withAlpha(50),
-                  width: 1,
-                ),
+                border: Border.all(color: Colors.white.withAlpha(50), width: 1),
               ),
-              child: Icon(Icons.fact_check_rounded, color: Colors.white, size: 18),
+              child: Icon(
+                Icons.fact_check_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'Smart Attendance',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
+            const Flexible(
+              child: Text(
+                'Aquar Smart Attendance',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
               ),
             ),
           ],
@@ -386,7 +403,10 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
               icon: const Icon(Icons.logout_rounded, color: Colors.white),
               label: const Text(
                 'Đăng xuất',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             )
           else
@@ -427,6 +447,18 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
   }
 
   void _selectSection(int index) {
+    if ((widget.profile.role == UserRole.admin && index == 4) ||
+        (widget.profile.role == UserRole.manager && index == 7)) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ReportDispatchScreen(
+            profile: widget.profile,
+            repository: widget.reportDispatchRepository,
+          ),
+        ),
+      );
+      return;
+    }
     if (widget.profile.role == UserRole.employee && index == 5) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -476,7 +508,10 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
     if (widget.profile.role == UserRole.admin && index == 1) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => AccountListScreen(profile: widget.profile),
+          builder: (_) => AccountListScreen(
+            profile: widget.profile,
+            teamAttendanceRepository: widget.teamAttendanceRepository,
+          ),
         ),
       );
       return;
@@ -609,7 +644,20 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
                     _selectedIndex == 2)
                   AttendanceHistoryScreen(
                     employeeId: widget.profile.uid,
+                    employeeName: widget.profile.displayName,
                     repository: widget.attendanceRepository,
+                  )
+                else if (widget.profile.role == UserRole.manager &&
+                    _selectedIndex == 1)
+                  TeamOnShiftScreen(
+                    profile: widget.profile,
+                    repository: widget.teamAttendanceRepository,
+                  )
+                else if (widget.profile.role == UserRole.manager &&
+                    _selectedIndex == 3)
+                  TeamAttendanceHistoryScreen(
+                    profile: widget.profile,
+                    repository: widget.teamAttendanceRepository,
                   )
                 else
                   _buildComingSoon(section),
@@ -647,6 +695,10 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
   );
 
   String _cardSubtitle(int index) {
+    if ((widget.profile.role == UserRole.admin && index == 4) ||
+        (widget.profile.role == UserRole.manager && index == 7)) {
+      return 'Gửi báo cáo chấm công và bảng lương';
+    }
     if (widget.profile.role == UserRole.admin && index == 1) {
       return 'Xem danh sách tài khoản';
     } else if (widget.profile.role == UserRole.admin && index == 5) {
@@ -669,6 +721,10 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
       return 'Xem giờ hiện tại và chấm công';
     } else if (widget.profile.role == UserRole.employee && index == 2) {
       return 'Xem các lần chấm công đã ghi nhận';
+    } else if (widget.profile.role == UserRole.manager && index == 1) {
+      return 'Xem nhân viên đã check-in và chưa check-out';
+    } else if (widget.profile.role == UserRole.manager && index == 3) {
+      return 'Xem lịch sử check-in và check-out';
     } else if (widget.profile.role == UserRole.employee && index == 5) {
       return 'Xem thống kê chấm công của bạn';
     }
@@ -770,10 +826,7 @@ class _UserProfileCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withAlpha(30),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withAlpha(60),
-                width: 1.5,
-              ),
+              border: Border.all(color: Colors.white.withAlpha(60), width: 1.5),
             ),
             child: Icon(roleIcon, size: 28, color: Colors.white),
           ),
@@ -914,16 +967,14 @@ class _FeatureCardState extends State<_FeatureCard> {
               const SizedBox(height: 16),
               Text(
                 widget.section.title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
                 widget.subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(height: 1.4),
               ),
               const SizedBox(height: 14),
               // Arrow chip
