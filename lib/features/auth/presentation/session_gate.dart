@@ -136,7 +136,7 @@ class _SessionGateState extends State<SessionGate> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    if (_checking) {
+    if (_checking && _profile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 

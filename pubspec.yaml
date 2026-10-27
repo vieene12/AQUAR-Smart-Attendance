@@ -1,5 +1,5 @@
 name: smart_attendance
-description: Ứng dụng chấm công nhân viên Smart Attendance.
+description: Ứng dụng chấm công nhân viên Aquar Smart Attendance.
 publish_to: none
 version: 1.0.0+1
 
@@ -7,6 +7,8 @@ environment:
   sdk: ^3.13.0
 
 dependencies:
+  archive: 4.0.9
+  cloud_functions: ^6.5.1
   cloud_firestore: ^6.10.0
   firebase_auth: ^6.7.0
   firebase_core: ^4.15.0

@@ -1,4 +1,4 @@
-rules_version = '2';
+﻿rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isActiveAdmin() {
@@ -63,7 +63,7 @@ service cloud.firestore {
       let data = request.resource.data;
       // 'method' is a client assertion; Rules cannot attest local_auth success.
       return data.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status'])
-        && data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status'])
+        && data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'nfcCardUid'])
         && data.employeeId is string
         && data.employeeId == request.auth.uid
         && data.workDate is string
@@ -71,7 +71,10 @@ service cloud.firestore {
         && attendanceId == request.auth.uid + '_' + data.workDate
         && data.checkInAt is timestamp
         && data.checkInAt == request.time
-        && data.method == 'biometric'
+        && ((data.method == 'biometric' && !data.keys().hasAny(['nfcCardUid']))
+          || (data.method == 'nfc_mobile'
+            && data.keys().hasAll(['nfcCardUid'])
+            && validMobileNfcLink(request.auth.uid, data.nfcCardUid)))
         && data.status == 'working';
     }
 
@@ -81,18 +84,22 @@ service cloud.firestore {
       let changed = updated.diff(old).affectedKeys();
       return old.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status'])
         && old.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status',
-          'manualRevision', 'lastManualAt', 'lastManualBy'])
+          'nfcCardUid', 'manualRevision', 'lastManualAt', 'lastManualBy'])
         && old.employeeId == request.auth.uid
         && old.workDate is string
         && attendanceId == request.auth.uid + '_' + old.workDate
         && old.checkInAt is timestamp
-        && old.method == 'biometric'
+        && ((old.method == 'biometric' && !old.keys().hasAny(['nfcCardUid']))
+          || (old.method == 'nfc_mobile' && old.keys().hasAll(['nfcCardUid'])
+            && validNfcUid(old.nfcCardUid)))
         && old.status == 'working'
         && updated.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'checkOutAt'])
         && updated.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'checkOutAt',
-          'manualRevision', 'lastManualAt', 'lastManualBy'])
-        && changed.hasOnly(['status', 'checkOutAt'])
+          'nfcCardUid', 'checkOutCardUid', 'manualRevision', 'lastManualAt', 'lastManualBy'])
+        && changed.hasOnly(['status', 'checkOutAt', 'checkOutCardUid'])
         && changed.hasAll(['status', 'checkOutAt'])
+        && (!changed.hasAny(['checkOutCardUid'])
+          || validMobileNfcLink(request.auth.uid, updated.checkOutCardUid))
         && updated.status == 'completed'
         && updated.checkOutAt is timestamp
         && updated.checkOutAt == request.time
@@ -116,6 +123,21 @@ service cloud.firestore {
         && getAfter(linkPath).data.keys().hasAll(['cardUid', 'updatedAt'])
         && getAfter(linkPath).data.keys().hasOnly(['cardUid', 'updatedAt'])
         && getAfter(linkPath).data.cardUid == cardUid;
+    }
+
+    // Dung get()/exists() thay vi getAfter()/existsAfter() vi trong transaction
+    // cham cong NFC tu dien thoai, employee chi ghi document `attendance`,
+    // khong ghi nfc_cards hay nfc_employee_cards trong cung batch.
+    function validMobileNfcLink(employeeUid, cardUid) {
+      let cardPath = /databases/$(database)/documents/nfc_cards/$(cardUid);
+      let linkPath = /databases/$(database)/documents/nfc_employee_cards/$(employeeUid);
+      return validNfcUid(cardUid)
+        && exists(cardPath)
+        && get(cardPath).data.keys().hasAll(['employeeUid', 'createdAt'])
+        && get(cardPath).data.employeeUid == employeeUid
+        && exists(linkPath)
+        && get(linkPath).data.keys().hasAll(['cardUid', 'updatedAt'])
+        && get(linkPath).data.cardUid == cardUid;
     }
 
     function validKioskCheckIn(attendanceId) {
@@ -313,12 +335,25 @@ service cloud.firestore {
     function validAccountEdit() {
       let data = request.resource.data;
       return resource.data.role in ['manager', 'employee']
-        && data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'hourlyRate'])
+        && data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'hourlyRate',
+          'employeeCode', 'position', 'shiftStart', 'shiftEnd', 'managerUid'])
         && data.fullName is string
         && data.fullName.size() > 0
         && data.fullName.size() <= 100
         && data.hourlyRate is int
-        && data.hourlyRate >= 0;
+        && data.hourlyRate >= 0
+        && (!('employeeCode' in data) || (resource.data.role == 'employee'
+          && data.employeeCode is string && data.employeeCode.size() > 0 && data.employeeCode.size() <= 40))
+        && (!('position' in data) || (resource.data.role == 'employee'
+          && data.position is string && data.position.size() > 0 && data.position.size() <= 100))
+        && (!('shiftStart' in data) || (resource.data.role == 'employee'
+          && data.shiftStart is string && data.shiftStart.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+        && (!('shiftEnd' in data) || (resource.data.role == 'employee'
+          && data.shiftEnd is string && data.shiftEnd.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+        && (!('managerUid' in data) || (resource.data.role == 'employee'
+          && data.managerUid is string
+          && exists(/databases/$(database)/documents/users/$(data.managerUid))
+          && get(/databases/$(database)/documents/users/$(data.managerUid)).data.role == 'manager'));
     }
 
     function validStatusChange(userId) {
@@ -382,7 +417,7 @@ service cloud.firestore {
     }
 
     match /nfc_cards/{cardUid} {
-      allow get: if isActiveKioskOperator();
+      allow get: if isActiveKioskOperator() || isActiveEmployee();
       allow list: if isActiveAdmin();
       allow create: if isActiveAdmin() && validNfcCard(cardUid);
       allow update: if false;
@@ -392,7 +427,8 @@ service cloud.firestore {
     }
 
     match /nfc_employee_cards/{employeeUid} {
-      allow get: if isActiveKioskOperator();
+      allow get: if isActiveKioskOperator()
+        || (isActiveEmployee() && employeeUid == request.auth.uid);
       allow list: if isActiveAdmin();
       allow create: if isActiveAdmin() && validNfcLink(employeeUid);
       allow update: if isActiveAdmin()
@@ -405,8 +441,8 @@ service cloud.firestore {
 
     match /attendance/{attendanceId} {
       allow get: if (isActiveEmployee()
-        && resource.data.employeeId == request.auth.uid
-        && attendanceId == request.auth.uid + '_' + vietnamWorkDate())
+        && attendanceId == request.auth.uid + '_' + vietnamWorkDate()
+        && (resource == null || resource.data.employeeId == request.auth.uid))
         || (isActiveKioskOperator()
           && attendanceId.matches('^.+_[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
       allow list: if isActiveKioskOperator()

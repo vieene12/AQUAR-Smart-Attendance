@@ -78,7 +78,12 @@ class WorkTimeCalculator {
     if (attendance.status != 'completed') {
       return WorkDayResult._(attendance, null, WorkExclusion.incomplete);
     }
-    if (!const {'biometric', 'nfc', 'manual'}.contains(attendance.method)) {
+    if (!const {
+      'biometric',
+      'nfc',
+      'nfc_mobile',
+      'manual',
+    }.contains(attendance.method)) {
       return WorkDayResult._(attendance, null, WorkExclusion.invalidMethod);
     }
     final checkIn = attendance.checkInAt;

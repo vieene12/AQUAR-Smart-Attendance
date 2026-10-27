@@ -224,7 +224,11 @@ class _FakePayrollRepository implements PayrollRepository {
   Future<bool> canAccess(UserProfile profile) async => allowed;
 
   @override
-  Future<PayrollData> loadPeriod(String startDate, String endDate) async {
+  Future<PayrollData> loadPeriod(
+    UserProfile profile,
+    String startDate,
+    String endDate,
+  ) async {
     loadCalls++;
     start = startDate;
     end = endDate;

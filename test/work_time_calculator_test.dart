@@ -4,6 +4,10 @@ import 'package:smart_attendance/features/payroll/domain/work_time_calculator.da
 const calculator = WorkTimeCalculator();
 
 void main() {
+  test('NFC điện thoại được tính giờ công như NFC tại quầy', () {
+    final mobileNfc = _day('2026-10-05', 8, 0, 17, 0, method: 'nfc_mobile');
+    expect(calculator.calculateDay(mobileNfc).fullMinutes, 480);
+  });
   test('đi muộn, về sớm và làm nửa ngày chỉ trừ phần trùng nghỉ trưa', () {
     expect(
       calculator.calculateDay(_day('2026-10-05', 9, 30, 18, 0)).fullMinutes,

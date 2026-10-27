@@ -9,7 +9,7 @@ class SmartAttendanceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Smart Attendance',
+      title: 'Aquar Smart Attendance',
       debugShowCheckedModeBanner: false,
       locale: const Locale('vi'),
       supportedLocales: const [Locale('vi')],
@@ -20,6 +20,8 @@ class SmartAttendanceApp extends StatelessWidget {
       ],
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      // Luôn dùng giao diện sáng, không phụ thuộc cài đặt hệ thống.
+      themeMode: ThemeMode.light,
       home: const SplashScreen(),
     );
   }

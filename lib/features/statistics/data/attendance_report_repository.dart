@@ -75,9 +75,18 @@ class FirestoreAttendanceReportRepository
       throw const AttendanceReportAccessException();
     }
 
+    final visibleUsers = users.docs.where((user) {
+      final managerUid = user.data()['managerUid'];
+      return profile.role == UserRole.admin ||
+          managerUid == null ||
+          managerUid is String &&
+              (managerUid.trim().isEmpty || managerUid == profile.uid);
+    }).toList();
+    final visibleUids = visibleUsers.map((user) => user.id).toSet();
+
     return AttendanceReportData(
       employeeNames: {
-        for (final user in users.docs)
+        for (final user in visibleUsers)
           user.id:
               user.data()['fullName'] is String &&
                   (user.data()['fullName'] as String).trim().isNotEmpty
@@ -85,39 +94,40 @@ class FirestoreAttendanceReportRepository
               : user.id,
       },
       employeeEmails: {
-        for (final user in users.docs)
+        for (final user in visibleUsers)
           if (user.data()['email'] is String)
             user.id: (user.data()['email'] as String).trim(),
       },
       records: [
         for (final document in attendance.docs)
-          StatisticsAttendance(
-            WorkAttendance(
-              employeeUid: document.data()['employeeId'] is String
-                  ? document.data()['employeeId'] as String
-                  : '',
-              workDate: document.data()['workDate'] is String
-                  ? document.data()['workDate'] as String
-                  : null,
-              status: document.data()['status'] is String
-                  ? document.data()['status'] as String
-                  : null,
-              method: document.data()['method'] is String
-                  ? document.data()['method'] as String
-                  : null,
-              checkInAt: document.data()['checkInAt'] is Timestamp
-                  ? (document.data()['checkInAt'] as Timestamp).toDate()
-                  : null,
-              checkOutAt: document.data()['checkOutAt'] is Timestamp
-                  ? (document.data()['checkOutAt'] as Timestamp).toDate()
+          if (visibleUids.contains(document.data()['employeeId']))
+            StatisticsAttendance(
+              WorkAttendance(
+                employeeUid: document.data()['employeeId'] is String
+                    ? document.data()['employeeId'] as String
+                    : '',
+                workDate: document.data()['workDate'] is String
+                    ? document.data()['workDate'] as String
+                    : null,
+                status: document.data()['status'] is String
+                    ? document.data()['status'] as String
+                    : null,
+                method: document.data()['method'] is String
+                    ? document.data()['method'] as String
+                    : null,
+                checkInAt: document.data()['checkInAt'] is Timestamp
+                    ? (document.data()['checkInAt'] as Timestamp).toDate()
+                    : null,
+                checkOutAt: document.data()['checkOutAt'] is Timestamp
+                    ? (document.data()['checkOutAt'] as Timestamp).toDate()
+                    : null,
+              ),
+              manualRevision: document.data().containsKey('manualRevision')
+                  ? (document.data()['manualRevision'] is int
+                        ? document.data()['manualRevision'] as int
+                        : -1)
                   : null,
             ),
-            manualRevision: document.data().containsKey('manualRevision')
-                ? (document.data()['manualRevision'] is int
-                      ? document.data()['manualRevision'] as int
-                      : -1)
-                : null,
-          ),
       ],
     );
   }

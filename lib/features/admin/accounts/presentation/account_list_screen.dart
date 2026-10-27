@@ -5,15 +5,22 @@ import 'package:smart_attendance/features/admin/accounts/domain/account_record.d
 import 'package:smart_attendance/features/admin/accounts/presentation/add_account_screen.dart';
 import 'package:smart_attendance/features/admin/accounts/presentation/edit_account_screen.dart';
 import 'package:smart_attendance/features/auth/domain/user_profile.dart';
+import 'package:smart_attendance/features/attendance/data/team_attendance_repository.dart';
+import 'package:smart_attendance/features/attendance/presentation/team_attendance_history_screen.dart';
 
 enum _RoleFilter { all, manager, employee, admin }
 
 enum _StatusFilter { all, active, locked }
 
 class AccountListScreen extends StatefulWidget {
-  const AccountListScreen({required this.profile, super.key});
+  const AccountListScreen({
+    required this.profile,
+    this.teamAttendanceRepository,
+    super.key,
+  });
 
   final UserProfile profile;
+  final TeamAttendanceRepository? teamAttendanceRepository;
 
   @override
   State<AccountListScreen> createState() => _AccountListScreenState();
@@ -64,7 +71,31 @@ class _AccountListScreenState extends State<AccountListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quản lý nhân viên')),
+      appBar: AppBar(
+        title: const Text('Quản lý nhân viên'),
+        actions: [
+          IconButton(
+            tooltip: 'Lịch sử chấm công',
+            icon: const Icon(Icons.history_rounded),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => Scaffold(
+                  appBar: AppBar(title: const Text('Lịch sử chấm công')),
+                  body: SafeArea(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: TeamAttendanceHistoryScreen(
+                        profile: widget.profile,
+                        repository: widget.teamAttendanceRepository,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: widget.profile.role == UserRole.admin
           ? FloatingActionButton.extended(
               onPressed: _openAddAccount,

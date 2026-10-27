@@ -84,7 +84,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
         return;
       }
       final (start, end) = _range;
-      final data = await _repository.loadPeriod(start, end);
+      final data = await _repository.loadPeriod(widget.profile, start, end);
       if (!mounted || request != _request) return;
       setState(() {
         _data = data;

@@ -2,17 +2,19 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_attendance/features/attendance/data/attendance_repository.dart';
 
-enum _HistoryFilter { all, month, range }
+enum _HistoryFilter { all, today, week, currentMonth, month, range }
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({
     required this.employeeId,
     super.key,
     this.repository,
+    this.employeeName,
   });
 
   final String employeeId;
   final AttendanceRepository? repository;
+  final String? employeeName;
 
   @override
   State<AttendanceHistoryScreen> createState() =>
@@ -116,6 +118,29 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     _load();
   }
 
+  void _showCurrent(_HistoryFilter filter) {
+    final local = vietnamWallTime(DateTime.now());
+    final today = DateTime(local.year, local.month, local.day);
+    final start = switch (filter) {
+      _HistoryFilter.today => today,
+      _HistoryFilter.week => today.subtract(
+        Duration(days: today.weekday - DateTime.monday),
+      ),
+      _ => DateTime(today.year, today.month),
+    };
+    final end = switch (filter) {
+      _HistoryFilter.today => today,
+      _HistoryFilter.week => start.add(const Duration(days: 6)),
+      _ => DateTime(today.year, today.month + 1, 0),
+    };
+    setState(() {
+      _filter = filter;
+      _startDate = start;
+      _endDate = end;
+    });
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -132,6 +157,16 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               selected: _filter == _HistoryFilter.all,
               onSelected: (_) => _showAll(),
             ),
+            for (final choice in [
+              (_HistoryFilter.today, 'Hôm nay'),
+              (_HistoryFilter.week, 'Tuần này'),
+              (_HistoryFilter.currentMonth, 'Tháng này'),
+            ])
+              FilterChip(
+                label: Text(choice.$2),
+                selected: _filter == choice.$1,
+                onSelected: (_) => _showCurrent(choice.$1),
+              ),
             FilterChip(
               label: const Text('Theo tháng'),
               selected: _filter == _HistoryFilter.month,
@@ -205,6 +240,15 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.employeeName != null) ...[
+              Text(
+                widget.employeeName!,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
             Wrap(
               spacing: 12,
               runSpacing: 8,
@@ -214,7 +258,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                   'Ngày làm: $dateLabel',
                   style: theme.textTheme.titleMedium,
                 ),
-                Chip(label: Text(completed ? 'Đã kết thúc' : 'Đang làm việc')),
+                Chip(
+                  label: Text(completed ? 'Đã hoàn thành ca' : 'Đang làm việc'),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -224,7 +270,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               children: [
                 Text('Check-in: ${_formatTime(record.checkInAt)}'),
                 Text(
-                  'Check-out: ${completed ? _formatTime(record.checkOutAt!) : 'Chưa có'}',
+                  'Check-out: ${completed ? _formatTime(record.checkOutAt!) : 'Chưa check-out'}',
                 ),
                 Text(
                   'Tổng giờ làm: ${completed ? _formatDuration(record.workedDuration!) : 'Chưa có'}',

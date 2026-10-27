@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:smart_attendance/core/nfc/nfc_uid.dart';
 import 'package:smart_attendance/features/admin/accounts/domain/account_record.dart';
+
+export 'package:smart_attendance/core/nfc/nfc_uid.dart' show normalizeCardUid;
 
 class EmployeeNfcCard {
   const EmployeeNfcCard({required this.account, this.cardUid});
@@ -18,14 +21,6 @@ class NfcCardAlreadyRegistered implements Exception {
 
 class NfcEmployeeUnavailable implements Exception {
   const NfcEmployeeUnavailable();
-}
-
-String normalizeCardUid(String value) {
-  final uid = value.trim().toUpperCase();
-  if (!RegExp(r'^([0-9A-F]{2}){1,32}$').hasMatch(uid)) {
-    throw const FormatException('UID thẻ không hợp lệ.');
-  }
-  return uid;
 }
 
 abstract class NfcCardTransaction {

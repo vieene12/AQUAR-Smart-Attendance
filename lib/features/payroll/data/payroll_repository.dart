@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_attendance/features/auth/domain/user_profile.dart';
 import 'package:smart_attendance/features/payroll/domain/work_time_calculator.dart';
 
+class PayrollAccessException implements Exception {
+  const PayrollAccessException();
+}
+
 class PayrollEmployee {
   const PayrollEmployee({
     required this.uid,
@@ -24,7 +28,11 @@ class PayrollData {
 
 abstract class PayrollRepository {
   Future<bool> canAccess(UserProfile profile);
-  Future<PayrollData> loadPeriod(String startDate, String endDate);
+  Future<PayrollData> loadPeriod(
+    UserProfile profile,
+    String startDate,
+    String endDate,
+  );
 }
 
 class FirestorePayrollRepository implements PayrollRepository {
@@ -53,7 +61,14 @@ class FirestorePayrollRepository implements PayrollRepository {
   }
 
   @override
-  Future<PayrollData> loadPeriod(String startDate, String endDate) async {
+  Future<PayrollData> loadPeriod(
+    UserProfile profile,
+    String startDate,
+    String endDate,
+  ) async {
+    if (!await canAccess(profile)) {
+      throw const PayrollAccessException();
+    }
     final users = await _firestore
         .collection('users')
         .where('role', isEqualTo: 'employee')
@@ -63,9 +78,20 @@ class FirestorePayrollRepository implements PayrollRepository {
         .where('workDate', isGreaterThanOrEqualTo: startDate)
         .where('workDate', isLessThanOrEqualTo: endDate)
         .get(const GetOptions(source: Source.server));
+    if (_auth.currentUser?.uid != profile.uid) {
+      throw const PayrollAccessException();
+    }
+    final visibleUsers = users.docs.where((user) {
+      final managerUid = user.data()['managerUid'];
+      return profile.role == UserRole.admin ||
+          managerUid == null ||
+          managerUid is String &&
+              (managerUid.trim().isEmpty || managerUid == profile.uid);
+    }).toList();
+    final visibleUids = visibleUsers.map((user) => user.id).toSet();
     return PayrollData(
       employees: [
-        for (final user in users.docs)
+        for (final user in visibleUsers)
           PayrollEmployee(
             uid: user.id,
             name:
@@ -79,20 +105,21 @@ class FirestorePayrollRepository implements PayrollRepository {
       ]..sort((a, b) => a.name.compareTo(b.name)),
       attendance: [
         for (final doc in attendance.docs)
-          WorkAttendance(
-            employeeUid: doc.data()['employeeId'] is String
-                ? doc.data()['employeeId'] as String
-                : '',
-            workDate: doc.data()['workDate'] as String?,
-            status: doc.data()['status'] as String?,
-            method: doc.data()['method'] as String?,
-            checkInAt: doc.data()['checkInAt'] is Timestamp
-                ? (doc.data()['checkInAt'] as Timestamp).toDate()
-                : null,
-            checkOutAt: doc.data()['checkOutAt'] is Timestamp
-                ? (doc.data()['checkOutAt'] as Timestamp).toDate()
-                : null,
-          ),
+          if (visibleUids.contains(doc.data()['employeeId']))
+            WorkAttendance(
+              employeeUid: doc.data()['employeeId'] is String
+                  ? doc.data()['employeeId'] as String
+                  : '',
+              workDate: doc.data()['workDate'] as String?,
+              status: doc.data()['status'] as String?,
+              method: doc.data()['method'] as String?,
+              checkInAt: doc.data()['checkInAt'] is Timestamp
+                  ? (doc.data()['checkInAt'] as Timestamp).toDate()
+                  : null,
+              checkOutAt: doc.data()['checkOutAt'] is Timestamp
+                  ? (doc.data()['checkOutAt'] as Timestamp).toDate()
+                  : null,
+            ),
       ],
     );
   }

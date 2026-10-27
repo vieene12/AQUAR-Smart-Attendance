@@ -31,6 +31,17 @@ StatisticsAttendance entry(
 );
 
 void main() {
+  test('NFC điện thoại được tính vào thống kê NFC', () {
+    final period = AttendanceStatisticsPeriod.containing(
+      AttendancePeriodKind.month,
+      instant('2026-10-15', 12),
+    );
+    final result = service.summarize([
+      entry('a', '2026-10-05', method: 'nfc_mobile'),
+    ], period);
+    expect(result.enterprise.nfcRecords, 1);
+    expect(result.enterprise.completedRecords, 1);
+  });
   test('tuần Việt Nam từ thứ Hai đến Chủ Nhật qua ranh giới năm', () {
     final period = AttendanceStatisticsPeriod.containing(
       AttendancePeriodKind.week,

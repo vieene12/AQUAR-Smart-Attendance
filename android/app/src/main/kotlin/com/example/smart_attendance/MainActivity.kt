@@ -14,9 +14,42 @@ import java.io.IOException
 
 class MainActivity : FlutterFragmentActivity() {
     private val emailChannel = "smart_attendance/report_email"
+    private val exportChannel = "smart_attendance/report_export"
+    private val exportRequestCode = 4172
+    private var pendingExport: Pair<ByteArray, MethodChannel.Result>? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, exportChannel).setMethodCallHandler { call, result ->
+            if (call.method != "saveFile") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            if (pendingExport != null) {
+                result.error("busy", "An export is already open", null)
+                return@setMethodCallHandler
+            }
+            val fileName = call.argument<String>("fileName")
+            val bytes = call.argument<ByteArray>("bytes")
+            val validName = fileName != null && fileName.matches(Regex("[A-Za-z0-9._-]+\\.(pdf|zip)"))
+            val validPdf = fileName?.endsWith(".pdf") == true && bytes?.take(5) == "%PDF-".toByteArray().toList()
+            val validZip = fileName?.endsWith(".zip") == true && bytes?.take(4) == listOf(0x50.toByte(), 0x4b.toByte(), 0x03.toByte(), 0x04.toByte())
+            if (!validName || bytes == null || !(validPdf || validZip)) {
+                result.error("invalid_arguments", "Invalid report file", null)
+                return@setMethodCallHandler
+            }
+            try {
+                pendingExport = bytes to result
+                startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = if (validPdf) "application/pdf" else "application/zip"
+                    putExtra(Intent.EXTRA_TITLE, fileName)
+                }, exportRequestCode)
+            } catch (error: Exception) {
+                pendingExport = null
+                result.error("file_error", "Cannot open save location", null)
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, emailChannel).setMethodCallHandler { call, result ->
             if (call.method != "openDraft") {
                 result.notImplemented()
@@ -64,6 +97,27 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }.start()
         }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != exportRequestCode) return
+        val pending = pendingExport ?: return
+        pendingExport = null
+        val uri = data?.data
+        if (resultCode != RESULT_OK || uri == null) {
+            pending.second.success(false)
+            return
+        }
+        Thread {
+            try {
+                contentResolver.openOutputStream(uri, "w")?.use { it.write(pending.first) }
+                    ?: throw IOException("Cannot write report")
+                runOnUiThread { pending.second.success(true) }
+            } catch (error: Exception) {
+                runOnUiThread { pending.second.error("file_error", "Cannot save report", null) }
+            }
+        }.start()
     }
 
     private fun openEmailChooser(recipient: String, subject: String, body: String, fileName: String, uri: Uri) {
