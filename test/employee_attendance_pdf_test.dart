@@ -11,14 +11,19 @@ void main() {
     DateTime.utc(2026, 10, 15, 12),
   );
 
-  StatisticsAttendance record(String uid, String date, {bool working = false}) {
+  StatisticsAttendance record(
+    String uid,
+    String date, {
+    bool working = false,
+    String method = 'biometric',
+  }) {
     final day = DateTime.parse(date);
     return StatisticsAttendance(
       WorkAttendance(
         employeeUid: uid,
         workDate: date,
         status: working ? 'working' : 'completed',
-        method: 'biometric',
+        method: method,
         checkInAt: DateTime.utc(day.year, day.month, day.day, 1),
         checkOutAt: working
             ? null
@@ -83,5 +88,21 @@ void main() {
       ),
       throwsA(isA<EmployeePdfFontException>()),
     );
+  });
+
+  test('tạo PDF cho kỳ chỉ có chấm công NFC mobile', () async {
+    final font = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
+    final report = await const EmployeeAttendancePdfGenerator().generate(
+      employeeUid: 'employee-a',
+      employeeName: 'Nguyễn Văn A',
+      employeeEmail: 'a@example.com',
+      period: period,
+      records: [record('employee-a', '2026-10-12', method: 'nfc_mobile')],
+      exportedAt: DateTime.utc(2026, 10, 15, 12),
+      fontData: font,
+    );
+
+    expect(report.bytes.length, greaterThan(1000));
+    expect(String.fromCharCodes(report.bytes.take(5)), '%PDF-');
   });
 }

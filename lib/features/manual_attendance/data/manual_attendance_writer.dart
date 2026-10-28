@@ -191,7 +191,12 @@ class TransactionalManualAttendanceWriter implements ManualAttendanceWriter {
         data['workDate'] != workDate ||
         checkIn is! Timestamp ||
         vietnamWorkDate(checkIn.toDate()) != workDate ||
-        !['biometric', 'nfc', 'manual'].contains(data['method'])) {
+        ![
+          'biometric',
+          'nfc',
+          'nfc_mobile',
+          'manual',
+        ].contains(data['method'])) {
       return false;
     }
     if (data['status'] == 'working') return !data.containsKey('checkOutAt');

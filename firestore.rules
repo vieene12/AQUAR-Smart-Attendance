@@ -1,32 +1,44 @@
-﻿rules_version = '2';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function hasActiveRole(profile, roles) {
+      return profile.role in roles && profile.status == 'active';
+    }
+
     function isActiveAdmin() {
       return request.auth != null
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
+        && hasActiveRole(
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data,
+          ['admin']);
     }
 
     function isActiveEmployee() {
       return request.auth != null
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee'
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
+        && hasActiveRole(
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data,
+          ['employee']);
     }
 
     function isActiveKioskOperator() {
       return request.auth != null
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'manager']
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
+        && hasActiveRole(
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data,
+          ['admin', 'manager']);
     }
 
     function isActiveStaff() {
       return request.auth != null
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'manager', 'employee']
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
+        && hasActiveRole(
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data,
+          ['admin', 'manager', 'employee']);
+    }
+
+    function currentUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
     function validAttendanceLocation() {
@@ -62,8 +74,7 @@ service cloud.firestore {
     function validCheckIn(attendanceId) {
       let data = request.resource.data;
       // 'method' is a client assertion; Rules cannot attest local_auth success.
-      return data.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status'])
-        && data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'nfcCardUid'])
+      return data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'nfcCardUid'])
         && data.employeeId is string
         && data.employeeId == request.auth.uid
         && data.workDate is string
@@ -82,7 +93,7 @@ service cloud.firestore {
       let old = resource.data;
       let updated = request.resource.data;
       let changed = updated.diff(old).affectedKeys();
-      return old.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status'])
+      return old.status == 'working'
         && old.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status',
           'nfcCardUid', 'manualRevision', 'lastManualAt', 'lastManualBy'])
         && old.employeeId == request.auth.uid
@@ -92,8 +103,6 @@ service cloud.firestore {
         && ((old.method == 'biometric' && !old.keys().hasAny(['nfcCardUid']))
           || (old.method == 'nfc_mobile' && old.keys().hasAll(['nfcCardUid'])
             && validNfcUid(old.nfcCardUid)))
-        && old.status == 'working'
-        && updated.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'checkOutAt'])
         && updated.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'checkOutAt',
           'nfcCardUid', 'checkOutCardUid', 'manualRevision', 'lastManualAt', 'lastManualBy'])
         && changed.hasOnly(['status', 'checkOutAt', 'checkOutCardUid'])
@@ -142,8 +151,7 @@ service cloud.firestore {
 
     function validKioskCheckIn(attendanceId) {
       let data = request.resource.data;
-      return data.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'nfcCardUid', 'operatorUid', 'recordedAt'])
-        && data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'nfcCardUid', 'operatorUid', 'recordedAt'])
+      return data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'nfcCardUid', 'operatorUid', 'recordedAt'])
         && data.employeeId is string
         && data.nfcCardUid is string
         && data.employeeId != request.auth.uid
@@ -161,20 +169,18 @@ service cloud.firestore {
       let old = resource.data;
       let updated = request.resource.data;
       let changed = updated.diff(old).affectedKeys();
-      return old.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status'])
+      return old.method in ['biometric', 'nfc']
+        && old.status == 'working'
         && ((old.method == 'biometric'
             && old.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status',
               'manualRevision', 'lastManualAt', 'lastManualBy']))
           || (old.method == 'nfc'
-            && old.keys().hasAll(['nfcCardUid', 'operatorUid', 'recordedAt'])
             && old.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'nfcCardUid', 'operatorUid', 'recordedAt',
               'manualRevision', 'lastManualAt', 'lastManualBy'])
             && old.nfcCardUid is string
             && old.operatorUid is string
             && old.recordedAt is timestamp))
         && old.employeeId is string
-        && old.method in ['biometric', 'nfc']
-        && old.status == 'working'
         && old.checkInAt is timestamp
         && old.workDate == vietnamWorkDate()
         && attendanceId == old.employeeId + '_' + old.workDate
@@ -199,18 +205,17 @@ service cloud.firestore {
 
     function validManualShape(attendanceId) {
       let data = request.resource.data;
-      return data.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status', 'manualRevision', 'lastManualAt', 'lastManualBy'])
-        && data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'checkOutAt', 'method', 'status',
+      return data.keys().hasOnly(['employeeId', 'workDate', 'checkInAt', 'checkOutAt', 'method', 'status',
           'nfcCardUid', 'operatorUid', 'recordedAt', 'checkOutMethod', 'checkOutOperatorUid',
           'checkOutCardUid', 'checkOutRecordedAt', 'manualRevision', 'lastManualAt', 'lastManualBy'])
         && data.employeeId is string
+        && activeNfcEmployee(data.employeeId)
         && data.workDate is string
         && data.workDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && attendanceId == data.employeeId + '_' + data.workDate
-        && activeNfcEmployee(data.employeeId)
         && data.checkInAt is timestamp
         && dateOfVietnamTime(data.checkInAt) == data.workDate
-        && data.method in ['biometric', 'nfc', 'manual']
+        && data.method in ['biometric', 'nfc', 'nfc_mobile', 'manual']
         && data.manualRevision is int
         && data.manualRevision > 0
         && data.lastManualAt == request.time
@@ -223,22 +228,14 @@ service cloud.firestore {
           : data.status == 'working');
     }
 
-    function matchingManualAudit(attendanceId, before, action) {
+    // The paired audit document is fully validated by validManualAuditCreate().
+    // Here, require only that this attendance write creates that exact revision
+    // in the same atomic request, avoiding duplicate cross-document validation.
+    function matchingManualAudit(attendanceId) {
       let data = request.resource.data;
       let auditPath = /databases/$(database)/documents/attendance_audit/$(attendanceId + '_' + string(data.manualRevision));
       return !exists(auditPath)
-        && existsAfter(auditPath)
-        && getAfter(auditPath).data.attendanceId == attendanceId
-        && getAfter(auditPath).data.employeeUid == data.employeeId
-        && getAfter(auditPath).data.operatorUid == request.auth.uid
-        && getAfter(auditPath).data.action == action
-        && getAfter(auditPath).data.revision == data.manualRevision
-        && getAfter(auditPath).data.before == before
-        && getAfter(auditPath).data.after == data
-        && getAfter(auditPath).data.createdAt == request.time
-        && getAfter(auditPath).data.reason is string
-        && getAfter(auditPath).data.reason.size() <= 500
-        && getAfter(auditPath).data.reason.matches('.*[^ ].*');
+        && existsAfter(auditPath);
     }
 
     function validManualCreate(attendanceId) {
@@ -251,7 +248,7 @@ service cloud.firestore {
         && (('checkOutAt' in data)
           ? data.checkOutMethod == 'manual'
           : !('checkOutMethod' in data))
-        && matchingManualAudit(attendanceId, {}, 'create');
+        && matchingManualAudit(attendanceId);
     }
 
     function validManualUpdate(attendanceId) {
@@ -259,12 +256,11 @@ service cloud.firestore {
       let data = request.resource.data;
       let changed = data.diff(old).affectedKeys();
       return validManualShape(attendanceId)
-        && old.keys().hasAll(['employeeId', 'workDate', 'checkInAt', 'method', 'status'])
         && old.employeeId == data.employeeId
         && old.workDate == data.workDate
         && old.method == data.method
         && old.checkInAt is timestamp
-        && old.method in ['biometric', 'nfc', 'manual']
+        && old.method in ['biometric', 'nfc', 'nfc_mobile', 'manual']
         && (('checkOutAt' in old)
           ? (old.checkOutAt is timestamp && old.status == 'completed'
             && 'checkOutAt' in data
@@ -280,23 +276,20 @@ service cloud.firestore {
           'manualRevision', 'lastManualAt', 'lastManualBy'])
         && changed.hasAny(['checkInAt', 'checkOutAt'])
         && data.manualRevision == (('manualRevision' in old) ? old.manualRevision + 1 : 1)
-        && matchingManualAudit(attendanceId, old,
-          (!('checkOutAt' in old) && 'checkOutAt' in data) ? 'add_checkout' : 'adjust');
+        && matchingManualAudit(attendanceId);
     }
 
     function validManualAuditCreate(auditId) {
       let audit = request.resource.data;
       let attendancePath = /databases/$(database)/documents/attendance/$(audit.attendanceId);
-      return audit.keys().hasAll(['attendanceId', 'employeeUid', 'operatorUid', 'reason', 'action',
-          'revision', 'before', 'after', 'createdAt'])
+      return audit.operatorUid == request.auth.uid
+        && audit.revision is int
+        && auditId == audit.attendanceId + '_' + string(audit.revision)
         && audit.keys().hasOnly(['attendanceId', 'employeeUid', 'operatorUid', 'reason', 'action',
           'revision', 'before', 'after', 'createdAt'])
         && audit.attendanceId is string
         && audit.employeeUid is string
-        && audit.operatorUid == request.auth.uid
-        && audit.revision is int
         && audit.revision > 0
-        && auditId == audit.attendanceId + '_' + string(audit.revision)
         && audit.reason is string
         && audit.reason.size() <= 500
         && audit.reason.matches('.*[^ ].*')
@@ -372,8 +365,9 @@ service cloud.firestore {
 
     function activeNfcEmployee(employeeUid) {
       return exists(/databases/$(database)/documents/users/$(employeeUid))
-        && get(/databases/$(database)/documents/users/$(employeeUid)).data.role == 'employee'
-        && get(/databases/$(database)/documents/users/$(employeeUid)).data.status == 'active';
+        && hasActiveRole(
+          get(/databases/$(database)/documents/users/$(employeeUid)).data,
+          ['employee']);
     }
 
     function validNfcCard(cardUid) {
@@ -448,19 +442,29 @@ service cloud.firestore {
       allow list: if isActiveKioskOperator()
         || (isActiveEmployee()
           && resource.data.employeeId == request.auth.uid);
-      allow create: if (isActiveEmployee() && validCheckIn(attendanceId))
-        || (isActiveKioskOperator() && validKioskCheckIn(attendanceId))
-        || (isActiveKioskOperator() && validManualCreate(attendanceId));
-      allow update: if (isActiveEmployee() && validCheckOut(attendanceId))
-        || (isActiveKioskOperator() && validKioskCheckOut(attendanceId))
-        || (isActiveKioskOperator() && validManualUpdate(attendanceId));
+      allow create: if isActiveStaff()
+        && ((currentUserRole() == 'employee' && validCheckIn(attendanceId))
+          || (currentUserRole() in ['admin', 'manager']
+            && ((request.resource.data.method == 'nfc' && validKioskCheckIn(attendanceId))
+              || (request.resource.data.method == 'manual' && validManualCreate(attendanceId)))));
+      allow update: if isActiveStaff()
+        && ((currentUserRole() == 'employee' && validCheckOut(attendanceId))
+          || (currentUserRole() in ['admin', 'manager']
+            && ((request.resource.data.diff(resource.data).affectedKeys()
+                  .hasAny(['manualRevision', 'lastManualAt', 'lastManualBy'])
+                && validManualUpdate(attendanceId))
+              || (!request.resource.data.diff(resource.data).affectedKeys()
+                  .hasAny(['manualRevision', 'lastManualAt', 'lastManualBy'])
+                && validKioskCheckOut(attendanceId)))));
       allow delete: if false;
     }
 
     match /attendance_audit/{auditId} {
       allow get: if isActiveKioskOperator();
       allow list: if false;
-      allow create: if isActiveKioskOperator() && validManualAuditCreate(auditId);
+      allow create: if isActiveStaff()
+        && currentUserRole() in ['admin', 'manager']
+        && validManualAuditCreate(auditId);
       allow update, delete: if false;
     }
 

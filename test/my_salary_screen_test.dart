@@ -42,11 +42,15 @@ class FakeMySalaryRepository implements MySalaryRepository {
   }
 }
 
-WorkAttendance record(String date, {bool checkedOut = true}) => WorkAttendance(
+WorkAttendance record(
+  String date, {
+  bool checkedOut = true,
+  String method = 'manual',
+}) => WorkAttendance(
   employeeUid: 'mine',
   workDate: date,
   status: checkedOut ? 'completed' : 'working',
-  method: 'manual',
+  method: method,
   checkInAt: DateTime.utc(2026, 10, int.parse(date.substring(8)), 1),
   checkOutAt: checkedOut
       ? DateTime.utc(2026, 10, int.parse(date.substring(8)), 10)
@@ -89,6 +93,37 @@ void main() {
     expect(repository.calls, 1);
   });
 
+  testWidgets('Employee mở Giờ làm từ trang chủ và không hiển thị tiền lương', (
+    tester,
+  ) async {
+    final repository = FakeMySalaryRepository()
+      ..data = MySalaryData(
+        uid: 'mine',
+        hourlyRate: 30000,
+        attendance: [record('2026-10-29', method: 'nfc_mobile')],
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EmployeeHomeScreen(
+          profile: employee,
+          onSignOut: () {},
+          mySalaryRepository: repository,
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Giờ làm').last);
+    await tester.tap(find.text('Giờ làm').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Giờ làm của tôi'), findsOneWidget);
+    expect(find.text('Tổng giờ công hợp lệ: 8 giờ 0 phút'), findsOneWidget);
+    expect(find.textContaining('NFC trên điện thoại'), findsOneWidget);
+    expect(find.textContaining('Đơn giá theo giờ'), findsNothing);
+    expect(find.textContaining('Lương tạm tính'), findsNothing);
+    expect(repository.calls, 1);
+  });
+
   testWidgets('tính tuần hợp lệ, thiếu Check-out và chi tiết phương thức', (
     tester,
   ) async {
@@ -97,7 +132,7 @@ void main() {
         uid: 'mine',
         hourlyRate: 30000,
         attendance: [
-          record('2026-10-12'),
+          record('2026-10-12', method: 'nfc_mobile'),
           record('2026-10-13', checkedOut: false),
         ],
       );
@@ -115,7 +150,8 @@ void main() {
       find.textContaining('Chưa hoàn thành · Không tính lương'),
       findsOneWidget,
     );
-    expect(find.textContaining('Thủ công'), findsNWidgets(2));
+    expect(find.textContaining('NFC trên điện thoại'), findsOneWidget);
+    expect(find.textContaining('Thủ công'), findsOneWidget);
   });
 
   testWidgets('tháng rỗng và đơn giá sai không tạo tiền lương', (tester) async {

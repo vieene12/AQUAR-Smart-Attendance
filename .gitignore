@@ -8,6 +8,7 @@ functions/node_modules/
 functions/.env
 functions/.env.*
 !functions/.env.example
+functions/rules_tests/node_modules/
 android/.gradle/
 android/captures/
 android/local.properties
@@ -24,3 +25,36 @@ android/key.properties
 .flutter-plugins-dependencies
 build/
 android/local.properties
+!lib/firebase_options.dart
+!android/app/google-services.json
+
+# ASP.NET Core backend
+backend/**/bin/
+backend/**/obj/
+backend/.vs/
+backend/TestResults/
+backend/.artifacts/
+backend/**/*.user
+backend/.env
+backend/**/appsettings.Local.json
+backend/**/*service-account*.json
+backend/**/firebase-adminsdk*.json
+
+# Local secrets and credentials
+**/.env
+**/.env.*
+!**/.env.example
+**/application_default_credentials.json
+**/*service-account*.json
+**/firebase-adminsdk*.json
+**/secrets.json
+*.pem
+*.p12
+*.pfx
+
+# Generated packages, logs, and temporary outputs
+*.apk
+*.aab
+*.log
+*.tmp
+.firebase/

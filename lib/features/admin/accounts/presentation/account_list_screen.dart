@@ -1,5 +1,5 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:smart_attendance/features/admin/accounts/data/account_api_client.dart';
 import 'package:smart_attendance/features/admin/accounts/data/account_repository.dart';
 import 'package:smart_attendance/features/admin/accounts/domain/account_record.dart';
 import 'package:smart_attendance/features/admin/accounts/presentation/add_account_screen.dart';
@@ -15,11 +15,13 @@ enum _StatusFilter { all, active, locked }
 class AccountListScreen extends StatefulWidget {
   const AccountListScreen({
     required this.profile,
+    this.repository,
     this.teamAttendanceRepository,
     super.key,
   });
 
   final UserProfile profile;
+  final AccountRepositoryContract? repository;
   final TeamAttendanceRepository? teamAttendanceRepository;
 
   @override
@@ -27,7 +29,7 @@ class AccountListScreen extends StatefulWidget {
 }
 
 class _AccountListScreenState extends State<AccountListScreen> {
-  final _repository = AccountRepository();
+  late final AccountRepositoryContract _repository;
   final _searchController = TextEditingController();
   Future<List<AccountRecord>>? _accounts;
   String? _changingStatusUid;
@@ -38,13 +40,17 @@ class _AccountListScreenState extends State<AccountListScreen> {
   @override
   void initState() {
     super.initState();
+    _repository = widget.repository ?? AccountRepository();
     if (widget.profile.role == UserRole.admin) {
       _accounts = _repository.getAccounts();
     }
   }
 
   void _retry() {
-    setState(() => _accounts = _repository.getAccounts());
+    final accounts = _repository.getAccounts();
+    setState(() {
+      _accounts = accounts;
+    });
   }
 
   @override
@@ -358,16 +364,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
       if (!mounted) return;
       _retry();
       _showMessage(locking ? 'Đã khóa tài khoản.' : 'Đã mở khóa tài khoản.');
-    } on FirebaseException catch (error) {
+    } on AccountApiException catch (error) {
       if (!mounted) return;
-      final message = switch (error.code) {
-        'permission-denied' => 'Không có quyền đổi trạng thái. Hãy kiểm tra quyền Admin và Security Rules.',
-        'not-found' => 'Tài khoản không còn tồn tại trong Firestore.',
-        'unavailable' ||
-        'deadline-exceeded' => 'Không thể kết nối Firestore. Vui lòng thử lại.',
-        _ => 'Không thể đổi trạng thái tài khoản. Vui lòng thử lại.',
-      };
-      _showMessage(message);
+      _showMessage(error.messageFor(AccountApiOperation.changeStatus));
     } catch (_) {
       if (mounted) {
         _showMessage('Không thể đổi trạng thái tài khoản. Vui lòng thử lại.');
@@ -384,13 +383,8 @@ class _AccountListScreenState extends State<AccountListScreen> {
   }
 
   String _errorMessage(Object? error) {
-    if (error is FirebaseException) {
-      return switch (error.code) {
-        'permission-denied' => 'Không có quyền xem danh sách tài khoản. Vui lòng kiểm tra Security Rules.',
-        'unavailable' || 'network-request-failed' || 'deadline-exceeded' =>
-          'Không thể kết nối Firestore. Vui lòng kiểm tra mạng và thử lại.',
-        _ => 'Không thể tải danh sách tài khoản. Vui lòng thử lại.',
-      };
+    if (error is AccountApiException) {
+      return error.messageFor(AccountApiOperation.list);
     }
     return 'Không thể tải danh sách tài khoản. Vui lòng thử lại.';
   }

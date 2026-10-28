@@ -103,6 +103,7 @@ class _MyAttendanceReportScreenState extends State<MyAttendanceReportScreen> {
   String _method(String? value) => switch (value) {
     'biometric' => 'Biometric',
     'nfc' => 'NFC',
+    'nfc_mobile' => 'NFC mobile',
     'manual' => 'Manual',
     _ => 'Không rõ phương thức',
   };

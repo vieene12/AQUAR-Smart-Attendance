@@ -36,12 +36,21 @@ void main() {
   });
 
   test(
-    'bản ghi manual và bản ghi đã điều chỉnh vẫn tính khi completed hợp lệ',
+    'manual, NFC kiosk và NFC mobile đều được tính khi completed hợp lệ',
     () {
       final manual = _day('2026-10-05', 8, 0, 17, 0, method: 'manual');
-      final adjusted = _day('2026-10-06', 8, 30, 16, 30, method: 'nfc');
+      final kiosk = _day('2026-10-06', 8, 30, 16, 30, method: 'nfc');
+      final mobile = _day('2026-10-07', 9, 0, 17, 0, method: 'nfc_mobile');
       expect(calculator.calculateDay(manual).fullMinutes, 480);
-      expect(calculator.calculateDay(adjusted).fullMinutes, 420);
+      expect(calculator.calculateDay(kiosk).fullMinutes, 420);
+      expect(calculator.calculateDay(mobile).fullMinutes, 420);
+      expect(
+        calculator.calculateSalaryVnd(
+          calculator.calculateDay(mobile).fullMinutes,
+          30000,
+        ),
+        210000,
+      );
     },
   );
 

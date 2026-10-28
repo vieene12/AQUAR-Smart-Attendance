@@ -4,11 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:printing/printing.dart';
 import 'package:smart_attendance/features/auth/domain/user_profile.dart';
 import 'package:smart_attendance/features/statistics/data/attendance_report_repository.dart';
-import 'package:smart_attendance/features/statistics/data/report_email_composer.dart';
+import 'package:smart_attendance/features/statistics/data/report_email_api_client.dart';
+import 'package:smart_attendance/features/statistics/data/report_email_repository.dart';
 import 'package:smart_attendance/features/statistics/domain/attendance_statistics_service.dart';
 import 'package:smart_attendance/features/statistics/domain/employee_attendance_pdf.dart';
-import 'package:smart_attendance/features/statistics/domain/report_email_draft.dart';
-import 'package:smart_attendance/features/statistics/presentation/report_dispatch_screen.dart';
 
 class AttendanceReportScreen extends StatefulWidget {
   const AttendanceReportScreen({
@@ -17,7 +16,7 @@ class AttendanceReportScreen extends StatefulWidget {
     this.initialDate,
     this.pdfGenerator,
     this.previewHandler,
-    this.emailComposer,
+    this.reportEmailRepository,
     super.key,
   });
 
@@ -27,7 +26,7 @@ class AttendanceReportScreen extends StatefulWidget {
   final EmployeeAttendancePdfGenerator? pdfGenerator;
   final Future<void> Function(BuildContext, EmployeeAttendancePdf)?
   previewHandler;
-  final ReportEmailComposer? emailComposer;
+  final ReportEmailRepositoryContract? reportEmailRepository;
 
   @override
   State<AttendanceReportScreen> createState() => _AttendanceReportScreenState();
@@ -36,6 +35,7 @@ class AttendanceReportScreen extends StatefulWidget {
 class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
   static const _statistics = AttendanceStatisticsService();
   late final AttendanceReportRepository _repository;
+  late final ReportEmailRepositoryContract _reportEmailRepository;
   late DateTime _selectedInstant;
   AttendancePeriodKind _kind = AttendancePeriodKind.week;
   AttendanceReportData? _data;
@@ -45,9 +45,6 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
 
   EmployeeAttendancePdfGenerator get _pdfGenerator =>
       widget.pdfGenerator ?? const EmployeeAttendancePdfGenerator();
-  ReportEmailComposer get _emailComposer =>
-      widget.emailComposer ?? const AndroidReportEmailComposer();
-
   AttendanceStatisticsPeriod get _period =>
       AttendanceStatisticsPeriod.containing(_kind, _selectedInstant);
 
@@ -55,6 +52,8 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
   void initState() {
     super.initState();
     _repository = widget.repository ?? FirestoreAttendanceReportRepository();
+    _reportEmailRepository =
+        widget.reportEmailRepository ?? ReportEmailRepository();
     _selectedInstant = widget.initialDate ?? DateTime.now();
     if (widget.profile.role == UserRole.admin ||
         widget.profile.role == UserRole.manager) {
@@ -210,7 +209,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
     var busy = false;
     String? busyLabel;
     String? actionMessage;
-    EmployeeAttendancePdf? manualSharePdf;
+    var emailRequestLocked = false;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => StatefulBuilder(
@@ -221,7 +220,6 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
                 busy = true;
                 busyLabel = 'Đang tạo PDF…';
                 actionMessage = null;
-                manualSharePdf = null;
               });
               try {
                 if (widget.profile.role != UserRole.admin &&
@@ -297,83 +295,40 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
               }
             }
 
-            Future<void> composeEmail() async {
-              if (busy) return;
+            Future<void> sendEmail() async {
+              if (busy || emailRequestLocked) return;
               updateDetail(() {
                 busy = true;
-                busyLabel = 'Đang soạn email…';
+                busyLabel = 'Đang gửi yêu cầu…';
                 actionMessage = null;
-                manualSharePdf = null;
               });
               try {
                 if (widget.profile.role != UserRole.admin &&
                     widget.profile.role != UserRole.manager) {
                   throw const AttendanceReportAccessException();
                 }
-                // A fresh server read checks the current signed-in role and
-                // supplies the registered email for this selected employee.
-                final fresh = await _repository.loadPeriod(
-                  widget.profile,
-                  period.startDate,
-                  period.endDate,
+                await _reportEmailRepository.sendReport(
+                  employeeUid: uid,
+                  periodKind: period.kind.name,
+                  anchorDate: period.startDate,
                 );
-                if (!detailContext.mounted) return;
-                if (!fresh.employeeNames.containsKey(uid)) {
-                  throw const AttendanceReportAccessException();
-                }
-                final currentName = fresh.employeeNames[uid]!;
-                final email = fresh.employeeEmails[uid] ?? '';
-                final draft = ReportEmailDraft.forEmployee(
-                  registeredEmail: email,
-                  employeeName: currentName,
-                  period: period,
-                );
-                final pdf = await _buildEmployeePdf(
-                  uid: uid,
-                  name: currentName,
-                  email: draft.recipient,
-                  period: period,
-                  records: fresh.records,
-                );
-                if (!detailContext.mounted) return;
-                updateDetail(() => manualSharePdf = pdf);
-                await _emailComposer.openDraft(draft, pdf);
                 if (!detailContext.mounted) return;
                 updateDetail(() {
-                  actionMessage = 'Đã mở lựa chọn ứng dụng email. Hãy kiểm tra người nhận, nội dung và tệp PDF trước khi tự gửi. Chưa xác nhận email đã gửi.';
+                  emailRequestLocked = true;
+                  actionMessage = 'Hệ thống đã tiếp nhận yêu cầu gửi email. Trạng thái này chưa xác nhận người nhận đã nhận thư.';
                 });
               } catch (error) {
                 if (!detailContext.mounted) return;
                 updateDetail(() {
-                  if (error is AttendanceReportAccessException ||
-                      (error is FirebaseException &&
-                          error.code == 'permission-denied')) {
-                    manualSharePdf = null;
-                    actionMessage = 'Không có quyền soạn email báo cáo.';
-                  } else if (error is InvalidReportEmailException) {
-                    actionMessage = 'Email đăng ký của nhân viên thiếu hoặc không hợp lệ. Cần cập nhật email trước khi soạn báo cáo.';
-                  } else if (error is EmptyEmployeePdfException) {
-                    actionMessage = 'Không có dữ liệu chấm công hợp lệ để tạo PDF đính kèm.';
-                  } else if (error is EmployeePdfFontException) {
-                    actionMessage = 'Không tải được font tiếng Việt cho PDF.';
-                  } else if (error is PlatformException &&
-                      error.code == 'no_email_app') {
-                    actionMessage = 'Không có ứng dụng email trên thiết bị. Có thể chia sẻ PDF thủ công.';
-                  } else if (error is PlatformException &&
-                      error.code == 'attachment_unsupported') {
-                    actionMessage = 'Ứng dụng email không hỗ trợ nhận PDF đính kèm. Có thể chia sẻ PDF thủ công.';
-                  } else if (error is PlatformException &&
-                      error.code == 'permission_denied') {
-                    actionMessage = 'Không cấp được quyền đọc tệp PDF cho ứng dụng email. Có thể chia sẻ PDF thủ công.';
-                  } else if (error is PlatformException &&
-                      error.code == 'file_error') {
-                    actionMessage = 'Không chuẩn bị được tệp PDF cho email. Có thể thử chia sẻ PDF thủ công.';
-                  } else if (error is MissingPluginException) {
-                    actionMessage = 'Thiết bị không hỗ trợ mở email kèm PDF. Có thể chia sẻ PDF thủ công.';
+                  if (error is ReportEmailUncertainException) {
+                    emailRequestLocked = true;
+                    actionMessage = 'Chưa xác định được kết quả gửi. Không gửi lại yêu cầu mới để tránh email trùng; hãy kiểm tra sau.';
+                  } else if (error is ReportEmailApiException) {
+                    actionMessage = error.userMessage;
+                  } else if (error is AttendanceReportAccessException) {
+                    actionMessage = 'Không có quyền gửi báo cáo qua email.';
                   } else {
-                    actionMessage = manualSharePdf == null
-                        ? 'Không tạo được PDF hoặc không tải được dữ liệu. Kiểm tra kết nối và thử lại.'
-                        : 'Không mở được email kèm PDF. Có thể chia sẻ PDF thủ công.';
+                    actionMessage = 'Không gửi được yêu cầu báo cáo. Vui lòng kiểm tra kết nối.';
                   }
                 });
               } finally {
@@ -383,52 +338,6 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
                     busyLabel = null;
                   });
                 }
-              }
-            }
-
-            Future<void> shareManually() async {
-              final pdf = manualSharePdf;
-              if (busy || pdf == null) return;
-              updateDetail(() => busy = true);
-              try {
-                if (widget.profile.role != UserRole.admin &&
-                    widget.profile.role != UserRole.manager) {
-                  throw const AttendanceReportAccessException();
-                }
-                final fresh = await _repository.loadPeriod(
-                  widget.profile,
-                  period.startDate,
-                  period.endDate,
-                );
-                if (!detailContext.mounted) return;
-                if (!fresh.employeeNames.containsKey(uid)) {
-                  throw const AttendanceReportAccessException();
-                }
-                final opened = await Printing.sharePdf(
-                  bytes: pdf.bytes,
-                  filename: pdf.fileName,
-                );
-                if (detailContext.mounted && !opened) {
-                  updateDetail(
-                    () => actionMessage =
-                        'Không mở được giao diện chia sẻ PDF trên thiết bị.',
-                  );
-                }
-              } catch (error) {
-                if (detailContext.mounted) {
-                  updateDetail(() {
-                    if (error is AttendanceReportAccessException ||
-                        (error is FirebaseException &&
-                            error.code == 'permission-denied')) {
-                      manualSharePdf = null;
-                      actionMessage = 'Không có quyền chia sẻ báo cáo.';
-                    } else {
-                      actionMessage = 'Không chia sẻ được PDF trên thiết bị. Kiểm tra kết nối và thử lại.';
-                    }
-                  });
-                }
-              } finally {
-                if (detailContext.mounted) updateDetail(() => busy = false);
               }
             }
 
@@ -455,34 +364,18 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
-                    onPressed: busy || stats.attendanceDays == 0
+                    onPressed:
+                        busy || stats.attendanceDays == 0 || emailRequestLocked
                         ? null
-                        : widget.emailComposer != null
-                        ? composeEmail
-                        : () => Navigator.of(detailContext).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => ReportDispatchScreen(
-                                profile: widget.profile,
-                                initialEmployeeUid: uid,
-                                initialKind: _kind,
-                                initialDate: _selectedInstant,
-                              ),
-                            ),
-                          ),
+                        : sendEmail,
                     icon: const Icon(Icons.email_outlined),
                     label: Text(
-                      busyLabel == 'Đang soạn email…'
-                          ? 'Đang soạn email…'
+                      busyLabel == 'Đang gửi yêu cầu…'
+                          ? 'Đang gửi yêu cầu…'
                           : 'Gửi báo cáo qua email',
                     ),
                   ),
                   if (actionMessage != null) Text(actionMessage!),
-                  if (manualSharePdf != null)
-                    TextButton.icon(
-                      onPressed: busy ? null : shareManually,
-                      icon: const Icon(Icons.share_outlined),
-                      label: const Text('Chia sẻ PDF thủ công'),
-                    ),
                   const SizedBox(height: 20),
                   _methodChart(stats),
                   if (stats.invalidRecords > 0)

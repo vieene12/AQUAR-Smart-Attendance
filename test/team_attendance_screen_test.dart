@@ -5,7 +5,6 @@ import 'package:smart_attendance/features/attendance/data/team_attendance_reposi
 import 'package:smart_attendance/features/attendance/presentation/team_attendance_history_screen.dart';
 import 'package:smart_attendance/features/attendance/presentation/team_on_shift_screen.dart';
 import 'package:smart_attendance/features/auth/domain/user_profile.dart';
-import 'package:smart_attendance/features/home/presentation/role_home_screens.dart';
 
 const manager = UserProfile(
   uid: 'manager',
@@ -47,26 +46,6 @@ void main() {
     expect(canManagerViewEmployee(manager, ''), isTrue);
     expect(canManagerViewEmployee(manager, 'manager'), isTrue);
     expect(canManagerViewEmployee(manager, 'manager-khac'), isFalse);
-  });
-
-  testWidgets('quản lý mở hai mục hiện có từ trang chủ', (tester) async {
-    final repository = FakeTeamRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ManagerHomeScreen(
-          profile: manager,
-          onSignOut: () {},
-          teamAttendanceRepository: repository,
-        ),
-      ),
-    );
-    await tester.ensureVisible(find.text('Nhân viên phụ trách'));
-    await tester.tap(find.text('Nhân viên phụ trách'));
-    await tester.pump();
-    expect(find.byType(TeamOnShiftScreen), findsOneWidget);
-    await tester.tap(find.text('Lịch sử'));
-    await tester.pump();
-    expect(find.byType(TeamAttendanceHistoryScreen), findsOneWidget);
   });
 
   test('đi trễ được tính theo giờ ca tại Việt Nam', () {

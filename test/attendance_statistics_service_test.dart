@@ -155,6 +155,31 @@ void main() {
     expect(result.byEmployeeUid['a']!.invalidRecords, 1);
   });
 
+  test('NFC mobile được tính công và gộp vào thống kê NFC', () {
+    final period = AttendanceStatisticsPeriod.containing(
+      AttendancePeriodKind.week,
+      instant('2026-10-05', 12),
+    );
+    final result = service.summarize([
+      entry('a', '2026-10-05', method: 'nfc_mobile'),
+      entry(
+        'a',
+        '2026-10-06',
+        status: 'working',
+        method: 'nfc_mobile',
+        noCheckOut: true,
+      ),
+      entry('b', '2026-10-05', method: 'nfc'),
+    ], period);
+
+    expect(result.enterprise.completedRecords, 2);
+    expect(result.enterprise.workingRecords, 1);
+    expect(result.enterprise.attendanceDays, 3);
+    expect(result.enterprise.nfcRecords, 3);
+    expect(result.enterprise.invalidRecords, 0);
+    expect(result.enterprise.totalMinutes, 960);
+  });
+
   test('thiếu dữ liệu, ngày sai và trạng thái không nhất quán không được tính công', () {
     final period = AttendanceStatisticsPeriod.containing(
       AttendancePeriodKind.month,

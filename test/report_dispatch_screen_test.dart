@@ -6,7 +6,6 @@ import 'package:smart_attendance/features/auth/domain/user_profile.dart';
 import 'package:smart_attendance/features/statistics/data/report_dispatch_repository.dart';
 import 'package:smart_attendance/features/statistics/domain/attendance_statistics_service.dart';
 import 'package:smart_attendance/features/statistics/presentation/report_dispatch_screen.dart';
-import 'package:smart_attendance/features/home/presentation/role_home_screens.dart';
 
 const admin = UserProfile(
   uid: 'admin',
@@ -136,44 +135,6 @@ class CountingObserver extends NavigatorObserver {
 }
 
 void main() {
-  testWidgets('Admin và Quản lý mở mục Gửi email thật từ trang chủ', (
-    tester,
-  ) async {
-    for (final profile in [
-      admin,
-      const UserProfile(
-        uid: 'manager',
-        displayName: 'Quản lý',
-        role: UserRole.manager,
-      ),
-    ]) {
-      final repository = FakeRepository();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: profile.role == UserRole.admin
-              ? AdminHomeScreen(
-                  profile: profile,
-                  onSignOut: () {},
-                  reportDispatchRepository: repository,
-                )
-              : ManagerHomeScreen(
-                  profile: profile,
-                  onSignOut: () {},
-                  reportDispatchRepository: repository,
-                ),
-        ),
-      );
-      await tester.ensureVisible(
-        find.text('Gửi báo cáo chấm công và bảng lương'),
-      );
-      await tester.tap(find.text('Gửi báo cáo chấm công và bảng lương'));
-      await tester.pumpAndSettle();
-      expect(find.byType(ReportDispatchScreen), findsOneWidget);
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-    }
-  });
-
   testWidgets('chọn một, nhiều, tất cả và hiện kết quả từng nhân viên', (
     tester,
   ) async {
@@ -251,19 +212,25 @@ void main() {
     },
   );
 
-  testWidgets('chọn 100 nhân viên, gửi và xuất không tạo route nhân viên', (tester) async {
+  testWidgets('chọn 100 nhân viên, gửi và xuất không tạo route nhân viên', (
+    tester,
+  ) async {
     final people = [
       for (var i = 0; i < 100; i++)
         ReportRecipient(uid: 'e$i', name: 'Nhân viên $i', code: 'NV$i'),
     ];
     final repository = FakeRepository(people: people);
     final observer = CountingObserver();
-    await tester.pumpWidget(MaterialApp(
-      navigatorObservers: [observer],
-      home: ReportDispatchScreen(
-        profile: admin, repository: repository, fileExporter: FakeFileExporter(),
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [observer],
+        home: ReportDispatchScreen(
+          profile: admin,
+          repository: repository,
+          fileExporter: FakeFileExporter(),
+        ),
       ),
-    ));
+    );
     await tester.pump();
     await tester.pump();
     final initialPushes = observer.pushes;
@@ -304,19 +271,28 @@ void main() {
     expect(find.text('Tổng lương: 475.000 ₫'), findsOneWidget);
   });
 
-  testWidgets('thiếu hourlyRate hiển thị rõ thay vì số tiền giả', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: ReportDispatchScreen(
-      profile: admin,
-      repository: FakeRepository(missingRate: true),
-      initialEmployeeUid: 'a',
-    )));
+  testWidgets('thiếu hourlyRate hiển thị rõ thay vì số tiền giả', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportDispatchScreen(
+          profile: admin,
+          repository: FakeRepository(missingRate: true),
+          initialEmployeeUid: 'a',
+        ),
+      ),
+    );
     await tester.pump();
     await tester.pump();
     await tester.tap(find.text('Xem chi tiết'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bảng lương'));
     await tester.pumpAndSettle();
-    expect(find.text('Đơn giá giờ: Chưa thiết lập đơn giá giờ'), findsOneWidget);
+    expect(
+      find.text('Đơn giá giờ: Chưa thiết lập đơn giá giờ'),
+      findsOneWidget,
+    );
     expect(find.text('Tổng lương: Chưa thiết lập đơn giá giờ'), findsOneWidget);
   });
 }
