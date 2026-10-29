@@ -1,0 +1,15 @@
+{
+  "name": "smart-attendance-rules-tests",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node check_employee_nfc_rules.js"
+  },
+  "devDependencies": {
+    "@firebase/app-compat": "0.5.18",
+    "@firebase/rules-unit-testing": "5.0.0",
+    "firebase": "12.19.0"
+  }
+}

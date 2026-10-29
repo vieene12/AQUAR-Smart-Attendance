@@ -161,7 +161,7 @@ class EmployeeAttendancePdfGenerator {
   static String _method(String? value) => switch (value) {
     'biometric' => 'Biometric',
     'nfc' => 'NFC',
-    'nfc_mobile' => 'NFC điện thoại',
+    'nfc_mobile' => 'NFC mobile',
     'manual' => 'Manual',
     _ => 'Không hợp lệ',
   };

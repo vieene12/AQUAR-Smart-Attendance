@@ -8,10 +8,10 @@ import 'package:smart_attendance/features/auth/domain/user_profile.dart';
 import 'package:smart_attendance/features/home/presentation/role_home_screens.dart';
 import 'package:smart_attendance/features/payroll/domain/work_time_calculator.dart';
 import 'package:smart_attendance/features/statistics/data/attendance_report_repository.dart';
-import 'package:smart_attendance/features/statistics/data/report_email_composer.dart';
+import 'package:smart_attendance/features/statistics/data/report_email_api_client.dart';
+import 'package:smart_attendance/features/statistics/data/report_email_repository.dart';
 import 'package:smart_attendance/features/statistics/domain/attendance_statistics_service.dart';
 import 'package:smart_attendance/features/statistics/domain/employee_attendance_pdf.dart';
-import 'package:smart_attendance/features/statistics/domain/report_email_draft.dart';
 import 'package:smart_attendance/features/statistics/presentation/attendance_report_screen.dart';
 
 const admin = UserProfile(
@@ -84,25 +84,38 @@ class FakePdfGenerator extends EmployeeAttendancePdfGenerator {
   }
 }
 
-class FakeEmailComposer implements ReportEmailComposer {
+class FakeReportEmailRepository implements ReportEmailRepositoryContract {
   int calls = 0;
-  ReportEmailDraft? draft;
-  EmployeeAttendancePdf? pdf;
+  String? employeeUid;
+  String? periodKind;
+  String? anchorDate;
   Object? failure;
-  Completer<void>? pending;
+  Completer<ReportEmailAccepted>? pending;
 
   @override
-  Future<void> openDraft(
-    ReportEmailDraft value,
-    EmployeeAttendancePdf file,
-  ) async {
+  Future<ReportEmailAccepted> sendReport({
+    required String employeeUid,
+    required String periodKind,
+    required String anchorDate,
+  }) async {
     calls++;
-    draft = value;
-    pdf = file;
+    this.employeeUid = employeeUid;
+    this.periodKind = periodKind;
+    this.anchorDate = anchorDate;
     if (failure != null) throw failure!;
-    if (pending != null) await pending!.future;
+    return pending?.future ?? accepted(employeeUid);
   }
 }
+
+ReportEmailAccepted accepted(String employeeUid) => ReportEmailAccepted(
+  requestId: 'request-id',
+  employeeUid: employeeUid,
+  periodKind: 'week',
+  startDate: '2026-10-12',
+  endDate: '2026-10-18',
+  maskedRecipient: 'a***@example.com',
+  acceptedAtUtc: DateTime.utc(2026, 10, 15),
+);
 
 StatisticsAttendance record(
   String uid,
@@ -401,24 +414,50 @@ void main() {
     expect(generator.calls, 0);
   });
 
-  testWidgets(
-    'soạn email dùng địa chỉ Firestore mới, PDF hiện có và không đánh dấu đã gửi',
-    (tester) async {
+  testWidgets('Admin mở ô Email từ trang chủ thay vì placeholder', (
+    tester,
+  ) async {
+    final repository = FakeReportRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminHomeScreen(
+          profile: admin,
+          onSignOut: () {},
+          attendanceReportRepository: repository,
+          reportEmailRepository: FakeReportEmailRepository(),
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Gửi email'));
+    await tester.tap(find.text('Gửi email'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AttendanceReportScreen), findsOneWidget);
+    expect(find.text('Đang phát triển'), findsNothing);
+    expect(repository.profile, admin);
+  });
+
+  for (final profile in [admin, manager]) {
+    testWidgets('${profile.role.name} gửi REST, có loading và accepted', (
+      tester,
+    ) async {
       final repository = FakeReportRepository()
         ..data = AttendanceReportData(
           employeeNames: const {'a': 'Nguyễn A'},
-          employeeEmails: const {'a': 'old@example.com'},
+          employeeEmails: const {'a': 'khong-duoc-gui@example.com'},
           records: [record('a', '2026-10-12')],
         );
+      final emailRepository = FakeReportEmailRepository()
+        ..pending = Completer<ReportEmailAccepted>();
       final generator = FakePdfGenerator();
-      final composer = FakeEmailComposer();
       await tester.pumpWidget(
         MaterialApp(
           home: AttendanceReportScreen(
-            profile: manager,
+            profile: profile,
             repository: repository,
+            reportEmailRepository: emailRepository,
             pdfGenerator: generator,
-            emailComposer: composer,
             initialDate: DateTime.utc(2026, 10, 15, 12),
           ),
         ),
@@ -431,111 +470,103 @@ void main() {
       );
       await tester.tap(find.text('Nguyễn A'));
       await tester.pumpAndSettle();
-      repository.data = AttendanceReportData(
-        employeeNames: const {'a': 'Nguyễn Văn A'},
-        employeeEmails: const {'a': 'new@example.com'},
-        records: [record('a', '2026-10-12')],
-      );
-      composer.pending = Completer<void>();
+
       await tester.tap(find.text('Gửi báo cáo qua email'));
       await tester.pump();
-      expect(repository.calls, 2);
-      expect(find.text('Đang soạn email…'), findsOneWidget);
+      await tester.tap(find.text('Đang gửi yêu cầu…'));
+      await tester.pump();
+
+      expect(emailRepository.calls, 1);
+      expect(
+        (
+          emailRepository.employeeUid,
+          emailRepository.periodKind,
+          emailRepository.anchorDate,
+        ),
+        ('a', 'week', '2026-10-12'),
+      );
+      expect(generator.calls, 0);
+      expect(repository.calls, 1);
+      emailRepository.pending!.complete(accepted('a'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Hệ thống đã tiếp nhận yêu cầu gửi email'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('đã nhận thư'), findsOneWidget);
       expect(
         tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
         isNull,
       );
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(generator.calls, 1);
-      expect(
-        (generator.uid, generator.name, generator.email),
-        ('a', 'Nguyễn Văn A', 'new@example.com'),
-      );
-      expect(composer.calls, 1);
-      expect(composer.draft?.recipient, 'new@example.com');
-      expect(composer.draft?.subject, contains('Nguyễn Văn A'));
-      expect(composer.draft?.body, contains('2026-10-12'));
-      expect(composer.pdf?.fileName, 'report.pdf');
-      composer.pending!.complete();
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Chưa xác nhận email đã gửi'), findsOneWidget);
-      expect(find.text('Chia sẻ PDF thủ công'), findsOneWidget);
-      repository.failure = const AttendanceReportAccessException();
-      await tester.drag(find.byType(ListView).last, const Offset(0, -200));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Chia sẻ PDF thủ công'));
-      await tester.pumpAndSettle();
-      expect(find.text('Không có quyền chia sẻ báo cáo.'), findsOneWidget);
-      expect(find.text('Chia sẻ PDF thủ công'), findsNothing);
-    },
-  );
+    });
+  }
 
-  testWidgets('email sai không tạo PDF; thiếu ứng dụng có chia sẻ thủ công', (
-    tester,
-  ) async {
-    final repository = FakeReportRepository()
-      ..data = AttendanceReportData(
-        employeeNames: const {'a': 'Nguyễn A'},
-        employeeEmails: const {'a': 'invalid-email'},
-        records: [record('a', '2026-10-12')],
-      );
-    final generator = FakePdfGenerator();
-    final composer = FakeEmailComposer();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AttendanceReportScreen(
-          profile: admin,
-          repository: repository,
-          pdfGenerator: generator,
-          emailComposer: composer,
-          initialDate: DateTime.utc(2026, 10, 15, 12),
+  for (final failure in [
+    ReportEmailApiFailure.network,
+    ReportEmailApiFailure.unavailable,
+    ReportEmailApiFailure.conflict,
+  ]) {
+    testWidgets('$failure khóa gửi lại để tránh email trùng', (tester) async {
+      final repository = FakeReportRepository()
+        ..data = AttendanceReportData(
+          employeeNames: const {'a': 'Nguyễn A'},
+          records: [record('a', '2026-10-12')],
+        );
+      final emailRepository = FakeReportEmailRepository()
+        ..failure = ReportEmailUncertainException(
+          ReportEmailApiException(failure),
+        );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AttendanceReportScreen(
+            profile: admin,
+            repository: repository,
+            reportEmailRepository: emailRepository,
+            initialDate: DateTime.utc(2026, 10, 15, 12),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Nguyễn A'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Nguyễn A'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Gửi báo cáo qua email'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('thiếu hoặc không hợp lệ'), findsOneWidget);
-    expect(generator.calls, 0);
-    expect(composer.calls, 0);
-    repository.data = AttendanceReportData(
-      employeeNames: const {'a': 'Nguyễn A'},
-      employeeEmails: const {'a': 'a@example.com'},
-      records: [record('a', '2026-10-12')],
-    );
-    composer.failure = PlatformException(code: 'no_email_app');
-    await tester.tap(find.text('Gửi báo cáo qua email'));
-    await tester.pumpAndSettle();
-    expect(generator.calls, 1);
-    expect(find.textContaining('Không có ứng dụng email'), findsOneWidget);
-    expect(find.text('Chia sẻ PDF thủ công'), findsOneWidget);
-  });
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Nguyễn A'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Nguyễn A'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gửi báo cáo qua email'));
+      await tester.pumpAndSettle();
 
-  testWidgets('mất quyền sau khi mở chi tiết không soạn email hoặc giữ PDF', (
+      expect(find.textContaining('Không gửi lại yêu cầu mới'), findsOneWidget);
+      expect(emailRepository.calls, 1);
+      expect(
+        tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
+        isNull,
+      );
+    });
+  }
+
+  testWidgets('lỗi 422 hiển thị rõ và không dùng PDF phía Flutter', (
     tester,
   ) async {
     final repository = FakeReportRepository()
       ..data = AttendanceReportData(
         employeeNames: const {'a': 'Nguyễn A'},
-        employeeEmails: const {'a': 'a@example.com'},
         records: [record('a', '2026-10-12')],
       );
+    final emailRepository = FakeReportEmailRepository()
+      ..failure = const ReportEmailApiException(
+        ReportEmailApiFailure.unprocessable,
+        statusCode: 422,
+      );
     final generator = FakePdfGenerator();
-    final composer = FakeEmailComposer();
     await tester.pumpWidget(
       MaterialApp(
         home: AttendanceReportScreen(
           profile: manager,
           repository: repository,
+          reportEmailRepository: emailRepository,
           pdfGenerator: generator,
-          emailComposer: composer,
           initialDate: DateTime.utc(2026, 10, 15, 12),
         ),
       ),
@@ -548,12 +579,17 @@ void main() {
     );
     await tester.tap(find.text('Nguyễn A'));
     await tester.pumpAndSettle();
-    repository.failure = const AttendanceReportAccessException();
     await tester.tap(find.text('Gửi báo cáo qua email'));
     await tester.pumpAndSettle();
-    expect(find.text('Không có quyền soạn email báo cáo.'), findsOneWidget);
+
+    expect(
+      find.textContaining('Email đăng ký hoặc dữ liệu báo cáo'),
+      findsOneWidget,
+    );
     expect(generator.calls, 0);
-    expect(composer.calls, 0);
-    expect(find.text('Chia sẻ PDF thủ công'), findsNothing);
+    expect(
+      tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
+      isNotNull,
+    );
   });
 }

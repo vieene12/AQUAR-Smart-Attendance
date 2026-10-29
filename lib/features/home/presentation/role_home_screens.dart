@@ -10,10 +10,10 @@ import 'package:smart_attendance/features/attendance/data/nfc_tag_reader.dart';
 import 'package:smart_attendance/features/auth/domain/user_profile.dart';
 import 'package:smart_attendance/features/attendance/data/attendance_repository.dart';
 import 'package:smart_attendance/features/attendance/data/location_service.dart';
-import 'package:smart_attendance/features/attendance/presentation/attendance_history_screen.dart';
-import 'package:smart_attendance/features/attendance/presentation/team_attendance_history_screen.dart';
-import 'package:smart_attendance/features/attendance/presentation/team_on_shift_screen.dart';
+import 'package:smart_attendance/features/attendance/data/manager_attendance_history_repository.dart';
 import 'package:smart_attendance/features/attendance/data/team_attendance_repository.dart';
+import 'package:smart_attendance/features/attendance/presentation/attendance_history_screen.dart';
+import 'package:smart_attendance/features/attendance/presentation/manager_attendance_history_screen.dart';
 import 'package:smart_attendance/features/attendance/presentation/attendance_screen.dart';
 import 'package:smart_attendance/features/kiosk/data/nfc_kiosk_repository.dart';
 import 'package:smart_attendance/features/kiosk/presentation/nfc_kiosk_screen.dart';
@@ -25,9 +25,8 @@ import 'package:smart_attendance/features/payroll/data/my_salary_repository.dart
 import 'package:smart_attendance/features/payroll/presentation/my_salary_screen.dart';
 import 'package:smart_attendance/features/payroll/presentation/payroll_screen.dart';
 import 'package:smart_attendance/features/statistics/data/attendance_report_repository.dart';
+import 'package:smart_attendance/features/statistics/data/report_email_repository.dart';
 import 'package:smart_attendance/features/statistics/presentation/attendance_report_screen.dart';
-import 'package:smart_attendance/features/statistics/presentation/report_dispatch_screen.dart';
-import 'package:smart_attendance/features/statistics/data/report_dispatch_repository.dart';
 import 'package:smart_attendance/features/statistics/data/my_attendance_report_repository.dart';
 import 'package:smart_attendance/features/statistics/presentation/my_attendance_report_screen.dart';
 
@@ -46,7 +45,7 @@ class AdminHomeScreen extends StatelessWidget {
     this.payrollRepository,
     this.attendanceReportRepository,
     this.teamAttendanceRepository,
-    this.reportDispatchRepository,
+    this.reportEmailRepository,
     super.key,
   });
 
@@ -63,7 +62,7 @@ class AdminHomeScreen extends StatelessWidget {
   final PayrollRepository? payrollRepository;
   final AttendanceReportRepository? attendanceReportRepository;
   final TeamAttendanceRepository? teamAttendanceRepository;
-  final ReportDispatchRepository? reportDispatchRepository;
+  final ReportEmailRepositoryContract? reportEmailRepository;
 
   @override
   Widget build(BuildContext context) => _RoleHomeScaffold(
@@ -80,7 +79,7 @@ class AdminHomeScreen extends StatelessWidget {
     payrollRepository: payrollRepository,
     attendanceReportRepository: attendanceReportRepository,
     teamAttendanceRepository: teamAttendanceRepository,
-    reportDispatchRepository: reportDispatchRepository,
+    reportEmailRepository: reportEmailRepository,
     roleIcon: Icons.admin_panel_settings_outlined,
     sections: const [
       _HomeSection(
@@ -147,8 +146,8 @@ class ManagerHomeScreen extends StatelessWidget {
     this.manualAttendanceRepository,
     this.payrollRepository,
     this.attendanceReportRepository,
-    this.teamAttendanceRepository,
-    this.reportDispatchRepository,
+    this.reportEmailRepository,
+    this.managerAttendanceHistoryRepository,
     super.key,
   });
 
@@ -161,8 +160,8 @@ class ManagerHomeScreen extends StatelessWidget {
   final ManualAttendanceRepository? manualAttendanceRepository;
   final PayrollRepository? payrollRepository;
   final AttendanceReportRepository? attendanceReportRepository;
-  final TeamAttendanceRepository? teamAttendanceRepository;
-  final ReportDispatchRepository? reportDispatchRepository;
+  final ReportEmailRepositoryContract? reportEmailRepository;
+  final ManagerAttendanceHistoryRepository? managerAttendanceHistoryRepository;
 
   @override
   Widget build(BuildContext context) => _RoleHomeScaffold(
@@ -175,20 +174,14 @@ class ManagerHomeScreen extends StatelessWidget {
     manualAttendanceRepository: manualAttendanceRepository,
     payrollRepository: payrollRepository,
     attendanceReportRepository: attendanceReportRepository,
-    teamAttendanceRepository: teamAttendanceRepository,
-    reportDispatchRepository: reportDispatchRepository,
+    reportEmailRepository: reportEmailRepository,
+    managerAttendanceHistoryRepository: managerAttendanceHistoryRepository,
     roleIcon: Icons.manage_accounts_outlined,
     sections: const [
       _HomeSection(
         'Tổng quan',
         'Tổng quan',
         Icons.dashboard_rounded,
-        Color(0xFF0288D1),
-      ),
-      _HomeSection(
-        'Nhân viên',
-        'Nhân viên phụ trách',
-        Icons.groups_rounded,
         Color(0xFF0288D1),
       ),
       _HomeSection(
@@ -320,7 +313,8 @@ class _RoleHomeScaffold extends StatefulWidget {
     this.payrollRepository,
     this.attendanceReportRepository,
     this.teamAttendanceRepository,
-    this.reportDispatchRepository,
+    this.reportEmailRepository,
+    this.managerAttendanceHistoryRepository,
   });
 
   final UserProfile profile;
@@ -341,7 +335,8 @@ class _RoleHomeScaffold extends StatefulWidget {
   final PayrollRepository? payrollRepository;
   final AttendanceReportRepository? attendanceReportRepository;
   final TeamAttendanceRepository? teamAttendanceRepository;
-  final ReportDispatchRepository? reportDispatchRepository;
+  final ReportEmailRepositoryContract? reportEmailRepository;
+  final ManagerAttendanceHistoryRepository? managerAttendanceHistoryRepository;
 
   @override
   State<_RoleHomeScaffold> createState() => _RoleHomeScaffoldState();
@@ -447,18 +442,6 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
   }
 
   void _selectSection(int index) {
-    if ((widget.profile.role == UserRole.admin && index == 4) ||
-        (widget.profile.role == UserRole.manager && index == 7)) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ReportDispatchScreen(
-            profile: widget.profile,
-            repository: widget.reportDispatchRepository,
-          ),
-        ),
-      );
-      return;
-    }
     if (widget.profile.role == UserRole.employee && index == 5) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -470,13 +453,15 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
       );
       return;
     }
-    if ((widget.profile.role == UserRole.admin && index == 2) ||
-        (widget.profile.role == UserRole.manager && index == 4)) {
+    if ((widget.profile.role == UserRole.admin && (index == 2 || index == 4)) ||
+        (widget.profile.role == UserRole.manager &&
+            (index == 3 || index == 6))) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => AttendanceReportScreen(
             profile: widget.profile,
             repository: widget.attendanceReportRepository,
+            reportEmailRepository: widget.reportEmailRepository,
           ),
         ),
       );
@@ -493,13 +478,36 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
       );
       return;
     }
+    if (widget.profile.role == UserRole.employee && index == 3) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => MySalaryScreen(
+            profile: widget.profile,
+            repository: widget.mySalaryRepository,
+            showSalary: false,
+          ),
+        ),
+      );
+      return;
+    }
     if ((widget.profile.role == UserRole.admin && index == 3) ||
-        (widget.profile.role == UserRole.manager && index == 5)) {
+        (widget.profile.role == UserRole.manager && index == 4)) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => PayrollScreen(
             profile: widget.profile,
             repository: widget.payrollRepository,
+          ),
+        ),
+      );
+      return;
+    }
+    if (widget.profile.role == UserRole.manager && index == 2) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ManagerAttendanceHistoryScreen(
+            profile: widget.profile,
+            repository: widget.managerAttendanceHistoryRepository,
           ),
         ),
       );
@@ -544,7 +552,7 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
     }
 
     if ((widget.profile.role == UserRole.admin && index == 7) ||
-        (widget.profile.role == UserRole.manager && index == 6)) {
+        (widget.profile.role == UserRole.manager && index == 5)) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => NfcKioskScreen(
@@ -560,7 +568,7 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
     }
 
     if ((widget.profile.role == UserRole.admin && index == 8) ||
-        (widget.profile.role == UserRole.manager && index == 2)) {
+        (widget.profile.role == UserRole.manager && index == 1)) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => ManualAttendanceScreen(
@@ -647,18 +655,6 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
                     employeeName: widget.profile.displayName,
                     repository: widget.attendanceRepository,
                   )
-                else if (widget.profile.role == UserRole.manager &&
-                    _selectedIndex == 1)
-                  TeamOnShiftScreen(
-                    profile: widget.profile,
-                    repository: widget.teamAttendanceRepository,
-                  )
-                else if (widget.profile.role == UserRole.manager &&
-                    _selectedIndex == 3)
-                  TeamAttendanceHistoryScreen(
-                    profile: widget.profile,
-                    repository: widget.teamAttendanceRepository,
-                  )
                 else
                   _buildComingSoon(section),
               ],
@@ -706,25 +702,30 @@ class _RoleHomeScaffoldState extends State<_RoleHomeScaffold> {
     } else if (widget.profile.role == UserRole.admin && index == 6) {
       return 'Đăng ký và thu hồi thẻ NFC';
     } else if ((widget.profile.role == UserRole.admin && index == 7) ||
-        (widget.profile.role == UserRole.manager && index == 6)) {
+        (widget.profile.role == UserRole.manager && index == 5)) {
       return 'Quét thẻ và xem trạng thái chấm công hôm nay';
     } else if ((widget.profile.role == UserRole.admin && index == 8) ||
-        (widget.profile.role == UserRole.manager && index == 2)) {
+        (widget.profile.role == UserRole.manager && index == 1)) {
       return 'Xem và điều chỉnh chấm công thủ công';
+    } else if (widget.profile.role == UserRole.manager && index == 2) {
+      return 'Xem lịch sử chấm công theo nhân viên';
     } else if ((widget.profile.role == UserRole.admin && index == 3) ||
-        (widget.profile.role == UserRole.manager && index == 5)) {
-      return 'Xem giờ công và lương tạm tính';
-    } else if ((widget.profile.role == UserRole.admin && index == 2) ||
         (widget.profile.role == UserRole.manager && index == 4)) {
-      return 'Xem thống kê chấm công theo kỳ';
+      return 'Xem giờ công và lương tạm tính';
+    } else if ((widget.profile.role == UserRole.admin &&
+            (index == 2 || index == 4)) ||
+        (widget.profile.role == UserRole.manager &&
+            (index == 3 || index == 6))) {
+      return (index == 4 && widget.profile.role == UserRole.admin) ||
+              (index == 6 && widget.profile.role == UserRole.manager)
+          ? 'Gửi báo cáo PDF tự động qua email'
+          : 'Xem thống kê chấm công theo kỳ';
     } else if (widget.profile.role == UserRole.employee && index == 1) {
       return 'Xem giờ hiện tại và chấm công';
     } else if (widget.profile.role == UserRole.employee && index == 2) {
       return 'Xem các lần chấm công đã ghi nhận';
-    } else if (widget.profile.role == UserRole.manager && index == 1) {
-      return 'Xem nhân viên đã check-in và chưa check-out';
-    } else if (widget.profile.role == UserRole.manager && index == 3) {
-      return 'Xem lịch sử check-in và check-out';
+    } else if (widget.profile.role == UserRole.employee && index == 3) {
+      return 'Xem giờ làm hợp lệ theo tuần và tháng';
     } else if (widget.profile.role == UserRole.employee && index == 5) {
       return 'Xem thống kê chấm công của bạn';
     }

@@ -11,12 +11,14 @@ class MySalaryScreen extends StatefulWidget {
     required this.profile,
     this.repository,
     this.initialDate,
+    this.showSalary = true,
     super.key,
   });
 
   final UserProfile profile;
   final MySalaryRepository? repository;
   final DateTime? initialDate;
+  final bool showSalary;
 
   @override
   State<MySalaryScreen> createState() => _MySalaryScreenState();
@@ -44,9 +46,17 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
       _load();
     } else {
       _loading = false;
-      _error = 'Không có quyền xem lương tạm tính.';
+      _error = _accessError;
     }
   }
+
+  String get _accessError => widget.showSalary
+      ? 'Không có quyền xem lương tạm tính.'
+      : 'Không có quyền xem giờ làm.';
+
+  String get _loadError => widget.showSalary
+      ? 'Không tải được lương tạm tính. Kiểm tra kết nối và thử lại.'
+      : 'Không tải được giờ làm. Kiểm tra kết nối và thử lại.';
 
   String _day(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -88,8 +98,8 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
             error is MySalaryAccessException ||
                 (error is FirebaseException &&
                     error.code == 'permission-denied')
-            ? 'Không có quyền xem lương tạm tính.'
-            : 'Không tải được lương tạm tính. Kiểm tra kết nối và thử lại.';
+            ? _accessError
+            : _loadError;
       });
     }
   }
@@ -109,7 +119,9 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
       initialDate: _date,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      helpText: 'Chọn kỳ lương tạm tính',
+      helpText: widget.showSalary
+          ? 'Chọn kỳ lương tạm tính'
+          : 'Chọn kỳ giờ làm',
     );
     if (!mounted || chosen == null) return;
     setState(() => _date = DateTime.utc(chosen.year, chosen.month, chosen.day));
@@ -126,6 +138,7 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
   String _method(String? value) => switch (value) {
     'biometric' => 'Sinh trắc học',
     'nfc' => 'NFC',
+    'nfc_mobile' => 'NFC trên điện thoại',
     'manual' => 'Thủ công',
     _ => 'Không xác định',
   };
@@ -151,7 +164,7 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
             _date.month,
           );
     int? salary;
-    if (summary != null) {
+    if (summary != null && widget.showSalary) {
       try {
         salary = _calculator.calculateSalaryVnd(
           summary.totalMinutes,
@@ -164,11 +177,17 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
       }
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Lương của tôi')),
+      appBar: AppBar(
+        title: Text(widget.showSalary ? 'Lương của tôi' : 'Giờ làm của tôi'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Lương tạm tính · Chưa phải bảng lương đã chốt.'),
+          Text(
+            widget.showSalary
+                ? 'Lương tạm tính · Chưa phải bảng lương đã chốt.'
+                : 'Tổng hợp giờ làm từ các bản ghi chấm công hợp lệ.',
+          ),
           const SizedBox(height: 12),
           SegmentedButton<MySalaryPeriod>(
             segments: const [
@@ -209,12 +228,14 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
               TextButton(onPressed: _load, child: const Text('Thử lại')),
           ] else if (summary != null) ...[
             Text('Tổng giờ công hợp lệ: ${_hours(summary.totalMinutes)}'),
-            Text(
-              'Đơn giá theo giờ: ${data!.hourlyRate is int && (data.hourlyRate as int) >= 0 ? '${data.hourlyRate} ₫/giờ' : 'Chưa có đơn giá hợp lệ'}',
-            ),
-            Text(
-              'Lương tạm tính: ${salary == null ? 'Chưa có đơn giá hợp lệ' : '$salary ₫'}',
-            ),
+            if (widget.showSalary) ...[
+              Text(
+                'Đơn giá theo giờ: ${data!.hourlyRate is int && (data.hourlyRate as int) >= 0 ? '${data.hourlyRate} ₫/giờ' : 'Chưa có đơn giá hợp lệ'}',
+              ),
+              Text(
+                'Lương tạm tính: ${salary == null ? 'Chưa có đơn giá hợp lệ' : '$salary ₫'}',
+              ),
+            ],
             Text(
               'Bản ghi chưa hoàn thành hoặc không hợp lệ: ${summary.excludedRecords}',
             ),
@@ -229,7 +250,7 @@ class _MySalaryScreenState extends State<MySalaryScreen> {
                     'Vào: ${_time(day.attendance.checkInAt)} · Ra: ${_time(day.attendance.checkOutAt)}\n'
                     'Giờ công: ${day.isPayable ? _hours(day.fullMinutes) : '0 giờ 0 phút'} · '
                     '${_method(day.attendance.method)}'
-                    '${day.isPayable ? '' : '\n${_exclusion(day.exclusion)} · Không tính lương'}',
+                    '${day.isPayable ? '' : '\n${_exclusion(day.exclusion)}${widget.showSalary ? ' · Không tính lương' : ''}'}',
                   ),
                   isThreeLine: true,
                 ),

@@ -8,7 +8,7 @@
   "scripts": {
     "check": "node --check index.js && node --check src/create_employee_account.js && node --check src/employee_reports.js",
     "test": "node --test",
-    "test:rules:employee-nfc": "node scripts/check_employee_nfc_rules.js"
+    "test:rules:employee-nfc": "npm --prefix rules_tests test"
   },
   "dependencies": {
     "firebase-admin": "14.5.0",

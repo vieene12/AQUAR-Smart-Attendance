@@ -41,6 +41,27 @@ class AccountRecord {
     );
   }
 
+  factory AccountRecord.fromApi(Map<String, dynamic> data) {
+    final uid = _nonEmptyText(data['uid']);
+    final role = _nonEmptyText(data['role']);
+    final status = _nonEmptyText(data['status']);
+    final hourlyRate = data['hourlyRate'];
+    if (uid == null ||
+        role == null ||
+        status == null ||
+        (hourlyRate != null && hourlyRate is! int)) {
+      throw const FormatException('Invalid account response.');
+    }
+    return AccountRecord(
+      uid: uid,
+      name: _nonEmptyText(data['fullName']),
+      email: _nonEmptyText(data['email']),
+      role: role,
+      status: status,
+      hourlyRate: hourlyRate as int?,
+    );
+  }
+
   static String? _nonEmptyText(Object? value) {
     if (value is! String) return null;
     final text = value.trim();

@@ -27,6 +27,7 @@ void main() {
         ),
       ),
     );
+    expect(find.text('Nhân viên phụ trách'), findsNothing);
     await tester.ensureVisible(find.text('Chấm công thủ công'));
     await tester.tap(find.text('Chấm công thủ công'));
     await tester.pumpAndSettle();
@@ -41,8 +42,8 @@ void main() {
         checkInAt: DateTime.utc(2026, 10, 11, 2, 15),
         checkOutAt: DateTime.utc(2026, 10, 11, 10, 30),
         status: 'completed',
-        method: 'biometric',
-        checkOutMethod: 'nfc',
+        method: 'nfc_mobile',
+        checkOutMethod: 'nfc_mobile',
       );
     await _pumpScreen(tester, repository);
     await tester.enterText(find.byType(TextField).first, 'nguyễn');
@@ -57,10 +58,13 @@ void main() {
     expect(find.text('Check-in: 09:15'), findsOneWidget);
     expect(find.text('Check-out: 17:30'), findsOneWidget);
     expect(
-      find.text('Phương thức vào: Sinh trắc học (biometric)'),
+      find.text('Phương thức vào: Thẻ NFC trên điện thoại'),
       findsOneWidget,
     );
-    expect(find.text('Phương thức ra: Thẻ NFC'), findsOneWidget);
+    expect(
+      find.text('Phương thức ra: Thẻ NFC trên điện thoại'),
+      findsOneWidget,
+    );
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'Lý do điều chỉnh'), findsOneWidget);
@@ -106,6 +110,28 @@ void main() {
     expect(find.text('Quên quét thẻ'), findsOneWidget);
     expect(find.text('Lưu chấm công'), findsOneWidget);
   });
+
+  testWidgets(
+    'ô giờ mở bộ chọn thời gian trên bàn phím không có dấu hai chấm',
+    (tester) async {
+      await _pumpScreen(tester, _FakeRepository());
+      await tester.tap(find.text('Nguyễn Văn A'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byTooltip('Chọn giờ vào'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      await tester.tap(find.byTooltip('Chọn giờ vào'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TimePickerDialog), findsOneWidget);
+      expect(find.text('Chọn giờ vào'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets('thiếu Check-out hiện giờ ra trống và phương thức manual', (
     tester,

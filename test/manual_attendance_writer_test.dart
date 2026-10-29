@@ -76,6 +76,29 @@ void main() {
     expect(store.audit['${_id}_2']!['after'], data);
   });
 
+  test('sửa giờ NFC mobile giữ method và metadata thẻ', () async {
+    final old = _existing('nfc_mobile', completed: true)
+      ..addAll({'nfcCardUid': '04AB01', 'checkOutCardUid': '04AB01'});
+    final store = _FakeStore()..attendance[_id] = old;
+
+    await TransactionalManualAttendanceWriter(store).save(
+      _change(
+        checkInAt: _in.add(const Duration(minutes: 15)),
+        checkOutAt: _out,
+        expected: _expected('nfc_mobile', completed: true),
+      ),
+    );
+
+    final data = store.attendance[_id]!;
+    expect(data['method'], 'nfc_mobile');
+    expect(data['nfcCardUid'], '04AB01');
+    expect(data['checkOutCardUid'], '04AB01');
+    expect(data['manualRevision'], 1);
+    expect(store.audit['${_id}_1']!['action'], 'adjust');
+    expect(store.audit['${_id}_1']!['before'], old);
+    expect(store.audit['${_id}_1']!['after'], data);
+  });
+
   test(
     'thiếu lý do, giờ sai, ca qua đêm và thao tác không đổi đều bị chặn',
     () async {

@@ -137,7 +137,7 @@ void main() {
             'mine',
             '2026-10-13',
             status: 'working',
-            method: 'nfc',
+            method: 'nfc_mobile',
             checkout: false,
           ),
           record('mine', '2026-10-14', method: 'manual', revision: 1),
@@ -160,6 +160,7 @@ void main() {
       find.textContaining('Thiếu giờ chấm công / Check-out'),
       findsOneWidget,
     );
+    expect(find.textContaining('NFC mobile'), findsOneWidget);
     expect(find.text('2026-10-15'), findsNothing);
   });
 

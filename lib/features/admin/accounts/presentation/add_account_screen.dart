@@ -1,10 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:smart_attendance/features/admin/accounts/data/account_api_client.dart';
 import 'package:smart_attendance/features/admin/accounts/data/account_creation_repository.dart';
 import 'package:smart_attendance/features/auth/domain/user_profile.dart';
 
 class AddAccountScreen extends StatefulWidget {
-  const AddAccountScreen({super.key});
+  const AddAccountScreen({this.repository, super.key});
+
+  final AccountCreationRepositoryContract? repository;
 
   @override
   State<AddAccountScreen> createState() => _AddAccountScreenState();
@@ -16,11 +18,17 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _hourlyRateController = TextEditingController();
-  final _repository = AccountCreationRepository();
+  late final AccountCreationRepositoryContract _repository;
   UserRole? _selectedRole;
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? AccountCreationRepository();
+  }
 
   @override
   void dispose() {
@@ -54,13 +62,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       if (!mounted) return;
       _passwordController.clear();
       Navigator.of(context).pop(true);
-    } on FirebaseAuthException catch (error) {
-      if (mounted) setState(() => _errorMessage = _authError(error));
-    } on FirebaseException catch (error) {
-      if (mounted) setState(() => _errorMessage = _firestoreError(error));
-    } on AccountCreationException catch (error) {
+    } on AccountApiException catch (error) {
       if (mounted) {
-        setState(() => _errorMessage = _creationError(error));
+        setState(
+          () => _errorMessage = error.messageFor(AccountApiOperation.create),
+        );
       }
     } catch (_) {
       if (mounted) {
@@ -72,30 +78,6 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  String _authError(FirebaseAuthException error) => switch (error.code) {
-    'email-already-in-use' => 'Email đã được sử dụng.',
-    'invalid-email' => 'Email không hợp lệ.',
-    'weak-password' => 'Mật khẩu quá yếu.',
-    'operation-not-allowed' =>
-      'Chưa bật đăng nhập Email/Password trong Firebase Authentication.',
-    'network-request-failed' => 'Không thể kết nối Firebase. Vui lòng thử lại.',
-    _ => 'Không thể tạo tài khoản. Vui lòng thử lại.',
-  };
-
-  String _firestoreError(FirebaseException error) => switch (error.code) {
-    'permission-denied' =>
-      'Không có quyền lưu hồ sơ. Hãy kiểm tra Firestore Security Rules.',
-    _ => 'Không thể lưu hồ sơ. Vui lòng thử lại.',
-  };
-
-  String _creationError(AccountCreationException error) =>
-      switch (error.failure) {
-        AccountCreationFailure.checkAccount => 'Chưa xác định được kết quả. Hãy kiểm tra Authentication và danh sách trước khi thử lại.',
-        AccountCreationFailure.cleanupFailed => 'Không thể hoàn tác tài khoản Auth. Hãy kiểm tra Authentication trước khi thử lại.',
-        AccountCreationFailure.adminSessionChanged =>
-          'Phiên Admin đã thay đổi. Vui lòng đăng nhập lại.',
-      };
 
   @override
   Widget build(BuildContext context) {

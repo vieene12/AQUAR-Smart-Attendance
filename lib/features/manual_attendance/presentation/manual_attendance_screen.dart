@@ -142,6 +142,34 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
     );
   }
 
+  Future<void> _chooseTime(
+    TextEditingController controller, {
+    required String helpText,
+  }) async {
+    final match = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$')
+        .firstMatch(controller.text.trim());
+    final initialTime = match == null
+        ? TimeOfDay.now()
+        : TimeOfDay(
+            hour: int.parse(match.group(1)!),
+            minute: int.parse(match.group(2)!),
+          );
+    final chosen = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      helpText: helpText,
+    );
+    if (!mounted || chosen == null) return;
+
+    setState(() {
+      controller.text =
+          '${chosen.hour.toString().padLeft(2, '0')}:'
+          '${chosen.minute.toString().padLeft(2, '0')}';
+      _saveError = null;
+      _saveMessage = null;
+    });
+  }
+
   Future<void> _save() async {
     final employee = _selected;
     if (_saving || _loadingRecord || employee == null) return;
@@ -280,6 +308,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
   String _method(String? value) => switch (value) {
     'biometric' => 'Sinh trắc học (biometric)',
     'nfc' => 'Thẻ NFC',
+    'nfc_mobile' => 'Thẻ NFC trên điện thoại',
     'manual' => 'Thủ công (manual)',
     null => 'Chưa có',
     _ => value,
@@ -391,18 +420,38 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
                     TextField(
                       controller: _checkIn,
                       keyboardType: TextInputType.datetime,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Giờ vào (HH:mm)',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          tooltip: 'Chọn giờ vào',
+                          onPressed: _saving
+                              ? null
+                              : () => _chooseTime(
+                                  _checkIn,
+                                  helpText: 'Chọn giờ vào',
+                                ),
+                          icon: const Icon(Icons.access_time_rounded),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _checkOut,
                       keyboardType: TextInputType.datetime,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Giờ ra (HH:mm)',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          tooltip: 'Chọn giờ ra',
+                          onPressed: _saving
+                              ? null
+                              : () => _chooseTime(
+                                  _checkOut,
+                                  helpText: 'Chọn giờ ra',
+                                ),
+                          icon: const Icon(Icons.access_time_rounded),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
